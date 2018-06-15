@@ -4,9 +4,10 @@ from sys import stdout
 from grammar.lcfrs import *
 from grammar.dcp import *
 from collections import defaultdict
+from util.enumerator import Enumerator
 
 
-def linearize(grammar, nonterminal_labeling, terminal_labeling, file):
+def linearize(grammar, nonterminal_labeling, terminal_labeling, file, delimiter='::', nonterminal_encoder=None):
     """
     :type grammar: LCFRS
     :param nonterminal_labeling:
@@ -17,13 +18,16 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file):
     print("Terminal Labeling: ", terminal_labeling, file=file)
     print(file=file)
 
-    terminals = Enumerator(file)
-    nonterminals = Enumerator(file)
+    terminals = Enumerator(first_index=1)
+    if nonterminal_encoder is None:
+        nonterminals = Enumerator(file)
+    else:
+        nonterminals = nonterminal_encoder
     num_inherited_args = {}
     num_synthezied_args = {}
 
-    for i, rule in enumerate(grammar.rules()):
-        rid = 'r'+str(i+1)
+    for rule in grammar.rules():
+        rid = 'r%i' % (rule.get_idx() + 1)
         print(rid, 'RTG   ', nonterminals.object_index(rule.lhs().nont()), '->', file=file, end=" ")
         print(list(map(lambda nont: nonterminals.object_index(nont), rule.rhs())), ';', file=file)
         #for rhs_nont in rule.rhs():
@@ -34,7 +38,10 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file):
         inh_args = defaultdict(lambda: 0)
         lhs_var_counter = CountLHSVars()
         synth_attributes = 0
-        for dcp in rule.dcp():
+
+        dcp_ordered = sorted(rule.dcp(), key=lambda x: (x.lhs().mem(), x.lhs().arg()))
+
+        for dcp in dcp_ordered:
             if dcp.lhs().mem() != -1:
                 inh_args[dcp.lhs().mem()] += 1
             else:
@@ -43,29 +50,29 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file):
         num_inherited_args[nonterminals.object_index(rule.lhs().nont())] = inh_args[-1]
         num_synthezied_args[nonterminals.object_index(rule.lhs().nont())] = synth_attributes
 
-        for dcp in rule.dcp():
-            printer = OUTPUT_DCP(terminals.object_index, rule, sync_index, inh_args)
+        for dcp in dcp_ordered:
+            printer = OUTPUT_DCP(terminals.object_index, rule, sync_index, inh_args, delimiter=delimiter)
             printer.evaluateList(dcp.rhs())
             var = dcp.lhs()
             if var.mem() == -1:
-                var_string = 's<0,' + str(var.arg() + 1 - inh_args[-1]) + ">"
+                var_string = 's<0,%i>' %(var.arg() + 1 - inh_args[-1])
             else:
-                var_string = 's<' + str(var.mem() + 1) + "," + str(var.arg() + 1) + ">"
-            print (rid, 'sDCP  ', var_string, '==', printer.string, ';', file=file)
+                var_string = 's<%i,%i>' % (var.mem() + 1, var.arg() + 1)
+            print('%s sDCP   %s == %s ;' % (rid, var_string, printer.string), file=file)
 
         s = 0
         for j, arg in enumerate(rule.lhs().args()):
-            print(rid, 'LCFRS ', 's<0,' + str(j + 1) + '>', '==', '[', end=' ', file=file)
+            print(rid, 'LCFRS  s<0,%i> == [' % (j + 1), end=' ', file=file)
             first = True
             for a in arg:
                 if not first:
                     print(",", end=' ', file=file)
                 if isinstance(a, LCFRS_var):
-                    print("x<{0!s},{1!s}>".format(a.mem + 1, a.arg + 1), end=' ', file=file)
+                    print("x<%i,%i>" % (a.mem + 1, a.arg + 1), end=' ', file=file)
                     pass
                 else:
                     if s in sync_index:
-                        print(str(terminals.object_index(a)) + '^{' + str(sync_index[s]) +'}', end=' ', file=file)
+                        print(str(terminals.object_index(a)) + '^{%i}' % sync_index[s], end=' ', file=file)
                     else:
                         print(str(terminals.object_index(a)), end=' ', file=file)
                     s += 1
@@ -74,76 +81,51 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file):
         print(file=file)
 
     print("Terminals: ", file=file)
-    terminals.print_index()
+    terminals.print_index(to_file=file)
     print(file=file)
 
     print("Nonterminal ID, nonterminal name, fanout, #inh, #synth: ", file=file)
-    max_fanout, max_inh, max_syn, max_args, fanouts, inherits, synths, args = nonterminals.print_index_and_stats(grammar, num_inherited_args, num_synthezied_args)
+    max_fanout, max_inh, max_syn, max_args, fanouts, inherits, synths, args \
+        = print_index_and_stats(nonterminals, grammar, num_inherited_args, num_synthezied_args, file=file)
     print(file=file)
     print("max fanout:", max_fanout, file=file)
     print("max inh:", max_inh, file=file)
     print("max synth:", max_syn, file=file)
     print("max args:", max_args, file=file)
     print(file=file)
-    for s, d, m in [('fanout', fanouts, max_fanout), ('inh', inherits, max_inh), ('syn', synths, max_syn), ('args', args, max_args)]:
+    for s, d, m in [('fanout', fanouts, max_fanout), ('inh', inherits, max_inh),
+                    ('syn', synths, max_syn), ('args', args, max_args)]:
         for i in range(m + 1):
-            print('# the number of nonterminals with', s, '=', i, 'is', d[i], file=file)
+            print('# the number of nonterminals with %s = %i is %i' % (s, i, d[i]), file=file)
         print(file=file)
     print(file=file)
 
     print("Initial nonterminal: ", nonterminals.object_index(grammar.start()), file=file)
     print(file=file)
+    return nonterminals, terminals
 
 
-class Enumerator:
-    def __init__(self, file=stdout, first_index=1):
-        self.first_index = first_index
-        self.counter = first_index - 1
-        self.obj_to_ind = {}
-        self.ind_to_obj = {}
-        self.file = file
-
-    def index_object(self, i):
-        """
-        :type i: int
-        :return:
-        """
-        return self.ind_to_obj[i]
-
-    def object_index(self, obj):
-        if obj in self.obj_to_ind:
-            return self.obj_to_ind[obj]
-        else:
-            self.counter += 1
-            self.obj_to_ind[obj] = self.counter
-            self.ind_to_obj[self.counter] = obj
-            return self.counter
-
-    def print_index(self):
-        for i in range(self.first_index, self.counter + 1):
-            print(i, self.index_object(i), file=self.file)
-
-    def print_index_and_stats(self, grammar, inh, syn):
-        fanouts = defaultdict(lambda: 0)
-        inherits = defaultdict(lambda: 0)
-        synths = defaultdict(lambda: 0)
-        args = defaultdict(lambda: 0)
-        max_fanout = 0
-        max_inh = 0
-        max_syn = 0
-        max_args = 0
-        for i in range (self.first_index, self.counter + 1):
-            fanout = grammar.fanout(self.index_object(i))
-            fanouts[fanout] += 1
-            max_fanout = max(max_fanout, fanout)
-            inherits[inh[i]] += 1
-            max_inh = max(max_inh, inh[i])
-            synths[syn[i]] += 1
-            max_syn = max(max_syn, syn[i])
-            args[inh[i] + syn[i]] += 1
-            max_args = max(max_args, inh[i] + syn[i])
-            print(i, self.index_object(i), fanout, inh[i], syn[i], file=self.file)
-        return max_fanout, max_inh, max_syn, max_args, fanouts, inherits, synths, args
+def print_index_and_stats(nonterminal_encoder, grammar, inh, syn, file=stdout):
+    fanouts = defaultdict(lambda: 0)
+    inherits = defaultdict(lambda: 0)
+    synths = defaultdict(lambda: 0)
+    args = defaultdict(lambda: 0)
+    max_fanout = 0
+    max_inh = 0
+    max_syn = 0
+    max_args = 0
+    for i in range(nonterminal_encoder.get_first_index(), nonterminal_encoder.get_counter()):
+        fanout = grammar.fanout(nonterminal_encoder.index_object(i))
+        fanouts[fanout] += 1
+        max_fanout = max(max_fanout, fanout)
+        inherits[inh[i]] += 1
+        max_inh = max(max_inh, inh[i])
+        synths[syn[i]] += 1
+        max_syn = max(max_syn, syn[i])
+        args[inh[i] + syn[i]] += 1
+        max_args = max(max_args, inh[i] + syn[i])
+        print(i, nonterminal_encoder.index_object(i), fanout, inh[i], syn[i], file=file)
+    return max_fanout, max_inh, max_syn, max_args, fanouts, inherits, synths, args
 
 
 class DCP_Labels(DCP_visitor):
@@ -198,19 +180,23 @@ class CountLHSVars(DCP_visitor):
 class OUTPUT_DCP(DCP_visitor):
     def visit_variable(self, var, id):
         if (var.mem() != -1):
-            self.string += 'x<' + str(var.mem() + 1) + "," + str(var.arg() + 1 - self.inh_args[var.mem()]) + "> "
+            self.string += 'x<%i,%i> ' % (var.mem() + 1, var.arg() + 1 - self.inh_args[var.mem()])
         else:
-            self.string += 'x<' + str(var.mem() + 1) + "," + str(var.arg() + 1) + "> "
+            self.string += 'x<%i,%i> ' % (var.mem() + 1, var.arg() + 1)
 
-    def __init__(self, terminal_to_index, rule, sync_index, inh_args):
+    def __init__(self, terminal_to_index, rule, sync_index, inh_args, delimiter='::'):
         self.terminal_to_index = terminal_to_index
         self.rule = rule
         self.string = ''
         self.sync_index = sync_index
         self.inh_args = inh_args
+        self.delimiter = delimiter
 
     def visit_string(self, s, id):
-        self.string += str(self.terminal_to_index[s]) + ' '
+        if s.edge_label():
+            self.string += str(self.terminal_to_index(s.get_string() + self.delimiter + s.edge_label())) + ' '
+        else:
+            self.string += str(self.terminal_to_index(s.get_string()))
 
     def visit_term(self, term, id):
         term.head().visitMe(self)
@@ -236,7 +222,8 @@ class OUTPUT_DCP(DCP_visitor):
             for obj in arg:
                 if not isinstance(obj, LCFRS_var):
                     if i == index.index():
-                        self.string += str(self.terminal_to_index(obj + '::' + index.edge_label())) + '^{' + str(self.sync_index[index.index()]) + '}'
+                        self.string += "%i^{%i}" % (self.terminal_to_index(obj + self.delimiter + index.edge_label()),
+                                                    self.sync_index[index.index()])
                         return
                     else:
                         i += 1

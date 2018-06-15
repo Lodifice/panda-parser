@@ -3,7 +3,9 @@ import corpora.negra_parse as np
 import corpora.tiger_parse as tp
 from hybridtree.general_hybrid_tree import HybridDag
 from hybridtree.monadic_tokens import construct_constituent_token
-from constituent.dag_induction import direct_extract_lcfrs_from_prebinarized_corpus, top, bottom
+from constituent.dag_induction import direct_extract_lcfrs_from_prebinarized_corpus, top, bottom, \
+    BasicNonterminalLabeling, PosTerminals
+from grammar.induction.terminal_labeling import FormTerminals, CompositionalTerminalLabeling
 from parser.naive.parsing import LCFRS_parser
 from parser.discodop_parser.parser import DiscodopKbestParser
 from parser.sDCPevaluation.evaluator import DCP_evaluator, dcp_to_hybriddag
@@ -11,19 +13,28 @@ import tempfile
 import copy
 import subprocess
 import os
+import json
+import shutil
 from grammar.lcfrs import LCFRS
+from grammar.linearization import linearize
+from graphs.schick_parser_rtg_import import read_rtg
+from parser.supervised_trainer.trainer import PyDerivationManager
+from grammar.lcfrs_derivation import LCFRSDerivationWrapper
+
+
+
+SCHICK_PARSER_JAR = 'HypergraphReduct-1.0-SNAPSHOT.jar'
 
 
 class MyTestCase(unittest.TestCase):
     def test_negra_to_dag_parsing(self):
-        pass
         names = list(map(str, [26954]))
 
         fd_, primary_file = tempfile.mkstemp(suffix='.export')
         with open(primary_file, mode='w') as pf:
 
             for s in names:
-                dsg = tp.sentence_names_to_deep_syntax_graphs([s], "res/tiger/tiger_s%s.xml" % s, hold=False,
+                dsg = tp.sentence_names_to_deep_syntax_graphs(["s" + s], "res/tiger/tiger_s%s.xml" % s, hold=False,
                                                               ignore_puntcuation=False)[0]
                 dsg.set_label(dsg.label[1:])
                 lines = np.serialize_hybrid_dag_to_negra([dsg], 0, 500, use_sentence_names=True)
@@ -39,6 +50,7 @@ class MyTestCase(unittest.TestCase):
         corpus2 = np.sentence_names_to_hybridtrees(names, binarized_file, secedge=True)
         dag = corpus[0]
         print(dag)
+
         assert isinstance(dag, HybridDag)
         self.assertEqual(8, len(dag.token_yield()))
         for token in dag.token_yield():
@@ -61,14 +73,23 @@ class MyTestCase(unittest.TestCase):
         self.assertSetEqual({'101', '500'}, top(dag_bin, {'500', '101', '102'}))
         print(bottom(dag_bin, {'500', '101', '102'}))
         self.assertSetEqual({'502'}, bottom(dag_bin, {'500', '101', '102'}))
-        grammar = direct_extract_lcfrs_from_prebinarized_corpus(dag_bin)
-        print(grammar)
+
+        nont_labeling = BasicNonterminalLabeling()
+        term_labeling = FormTerminals()  # PosTerminals()
+
+        grammar = direct_extract_lcfrs_from_prebinarized_corpus(dag_bin, term_labeling, nont_labeling)
+        # print(grammar)
+
+        for rule in grammar.rules():
+            print(rule.get_idx(), rule)
+
+        print("Testing LCFRS parsing and DCP evaluation".center(80, '='))
 
         parser = LCFRS_parser(grammar)
 
-        poss = list(map(lambda x: x.pos(), dag_bin.token_yield()))
-        print(poss)
-        parser.set_input(poss)
+        parser_input = term_labeling.prepare_parser_input(dag_bin.token_yield())
+        print(parser_input)
+        parser.set_input(parser_input)
 
         parser.parse()
 
@@ -103,6 +124,70 @@ class MyTestCase(unittest.TestCase):
         with open(primary_file) as pcf:
             for line in pcf:
                 print(line, end='')
+
+
+        print('Testing reduct computation with Schick parser'.center(80, '='))
+
+        grammar_path = '/tmp/lcfrs_dcp_grammar.gr'
+        derivation_manager = PyDerivationManager(grammar)
+
+        with open('/tmp/lcfrs_dcp_grammar.gr', 'w') as grammar_file:
+            nonterminal_enc, terminal_enc = linearize(grammar, nont_labeling, term_labeling, grammar_file,
+                                                      delimiter=' : ', nonterminal_encoder=derivation_manager.get_nonterminal_map())
+
+        print(np.negra_to_json(dag, terminal_enc, term_labeling))
+        json_data = np.export_corpus_to_json([dag], terminal_enc, term_labeling)
+
+        corpus_path = '/tmp/json_dags.json'
+        with open(corpus_path, 'w') as data_file:
+            json.dump(json_data, data_file)
+
+        reduct_dir = '/tmp/schick_parser_reducts'
+        if os.path.isdir(reduct_dir):
+            shutil.rmtree(reduct_dir)
+        os.makedirs(reduct_dir)
+
+        p = subprocess.Popen([' '.join(
+            ["java", "-jar", os.path.join("util", SCHICK_PARSER_JAR), 'reduct', '-g', grammar_path, '-t',
+             corpus_path, "--input-format", "json", "-o", reduct_dir])], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        print("stdout", p.stdout.name)
+
+        while True:
+            nextline = p.stdout.readline()
+            if nextline == b'' and p.poll() is not None:
+                break
+            print(nextline.decode('unicode_escape'), end='')
+            # sys.stdout.write(nextline)
+            # sys.stdout.flush()
+
+        p.wait()
+        p.stdout.close()
+        self.assertEqual(0, p.returncode)
+        rtgs = []
+
+        def decode_nonterminals(s):
+            return derivation_manager.get_nonterminal_map().index_object(int(s))
+
+        for i in range(1, len(corpus) + 1):
+            rtgs.append(read_rtg(os.path.join(reduct_dir, str(i) + '.gra'), symbol_offset=-1, rule_prefix='r',
+                                 process_nonterminal=decode_nonterminals))
+
+        print("Reduct RTG")
+        for rule in rtgs[0].rules:
+            print(rule.lhs, "->", rule.symbol, rule.rhs)
+
+        derivation_manager.get_nonterminal_map().print_index()
+        derivation_manager.convert_rtgs_to_hypergraphs(rtgs)
+        derivation_manager.serialize(bytes('/tmp/reduct_manager.trace', encoding='utf8'))
+        derivations = [LCFRSDerivationWrapper(der) for der in derivation_manager.enumerate_derivations(0, grammar)]
+        self.assertGreaterEqual(len(derivations), 1)
+
+        if len(derivations) >= 1:
+            print("Sentence", i)
+            for der in derivations:
+                print(der)
+                self.assertTrue(der.check_integrity_recursive(der.root_id(), grammar.start()))
+
 
     def test_negra_dag_small_grammar(self):
         DAG_CORPUS = 'res/tiger/tiger_full_with_sec_edges.export'
@@ -159,6 +244,13 @@ class MyTestCase(unittest.TestCase):
                 parser.clear()
 
         print("Wrote results to %s" % RESULT_FILE)
+        _, REFERENCE_FILE = tempfile.mkstemp(prefix='parser_reference_', suffix='.export')
+        with open(REFERENCE_FILE, 'w') as ref:
+            lines = np.serialize_hybridtrees_to_negra(corpus, 1, 500, use_sentence_names=True)
+            for line in lines:
+                print(line, end='', file=ref)
+        print("Wrote reference corpus to %s" % REFERENCE_FILE)
+        subprocess.call(["discodop", "eval", REFERENCE_FILE, RESULT_FILE, '--secedges=all'])
 
 
 if __name__ == '__main__':

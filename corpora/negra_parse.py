@@ -10,6 +10,7 @@ import re
 import codecs
 import os
 from util.enumerator import Enumerator
+from collections import defaultdict
 
 # Used only by CL experiments
 # Location of Negra corpus.
@@ -445,5 +446,118 @@ def serialize_hybrid_dag_to_negra(dsgs, counter, length, use_sentence_names=Fals
     return sentence_names
 
 
+def negra_to_json(dsg, terminal_encoding, terminal_labeling):
+    """
+    :param dsg:
+    :type dsg: HybridDag
+    :return:
+    :rtype:
+    """
+
+    node_io = {}
+
+    def dag_to_json():
+        data = {"type": "hypergraph"}
+        data['nodes'] = []
+        data['edges'] = []
+
+        edge_idx = 0
+        next_node_idx = 0
+        sec_children = defaultdict(lambda: [])
+
+        def dag_to_json_rec(node, node_idx):
+            nonlocal next_node_idx
+            nonlocal edge_idx
+            nonlocal node_io
+            output = next_node_idx
+            next_node_idx += 1
+            data['nodes'].append(output)
+            first_child = next_node_idx
+            data['nodes'].append(first_child)
+            next_child = first_child
+            next_node_idx += 1
+            for child in dsg.children(node):
+                next_child = dag_to_json_rec(child, next_child)
+            for _ in dsg.sec_children(node):
+                c_output = next_node_idx
+                next_node_idx += 1
+                data['nodes'].append(c_output)
+                sec_children[node].append((next_child, c_output))
+                next_child = c_output
+
+            token = dsg.node_token(node)
+            label = terminal_labeling.token_tree_label(token)
+            label = terminal_encoding.object_index(label)
+            node_io[node] = node_idx, output
+            data['edges'].append({'id': edge_idx,
+                                  'label': label,
+                                  # only first and last child
+                                  'attachment': [first_child, next_child, node_idx, output],
+                                  'terminal': True})
+
+            edge_idx += 1
+            return output
+
+        def add_sec_children(node):
+            assert len(dsg.sec_children(node)) == len(sec_children[node])
+            nonlocal edge_idx
+            for child, (inp, outp) in zip(dsg.sec_children(node), sec_children[node]):
+                ci, co = node_io[child]
+                label = terminal_encoding.object_index('SECEDGE')
+                data['edges'].append({'id': edge_idx,
+                                      'label': label,
+                                      'attachment': [ci, co, inp, outp],
+                                      'terminal': True
+                                      })
+                edge_idx += 1
+
+        first_root = next_node_idx
+        data['nodes'].append(first_root)
+        next_node_idx += 1
+        next_root = first_root
+        for root in dsg.root:
+            next_root = dag_to_json_rec(root, next_root)
+        for node in dsg.nodes():
+            add_sec_children(node)
+
+        data['ports'] = [first_root, next_root]
+        return data
+
+    def string_to_graph_json(token_sequence, start_node, start_edge):
+        data = {'type': 'hypergraph',
+                'nodes': [i for i in range(start_node, start_node + len(token_sequence) + 1)],
+                'edges': [{'id': idx + start_edge,
+                           'label': terminal_encoding.object_index(terminal_labeling.token_label(token)),
+                           'attachment': [start_node + idx, start_node + idx + 1],
+                           'terminal': True}
+                          for idx, token in enumerate(token_sequence)],
+                'ports': [start_node, start_node + len(token_sequence)]
+                }
+        return data
+
+    data = {"type": "bihypergraph"}
+    data["G1"] = dag_to_json()
+    # print(data["G2"])
+    max_node = max(data["G1"]['nodes'])
+    max_edge = max(map(lambda x: x['id'], data["G1"]['edges']))
+    data["G2"] = string_to_graph_json(dsg.token_yield(), start_node=max_node + 1, start_edge=max_edge + 1)
+    max_edge = max(map(lambda x: x['id'], data["G2"]['edges']))
+    data["alignment"] = [{'id': j + max_edge + 1,
+                          'label': -1,
+                           'attachment': [node_io[idx][0], max_node + 1 + j]}
+                           for j, idx in enumerate(dsg.id_yield())]
+    return data
+
+
+def export_corpus_to_json(corpus, terminals, terminal_labeling=str):
+    data = {  "corpus": []
+            , "alignmentLabel": terminals.object_index(None)
+            , "nonterminalEdgeLabel": terminals.object_index(None)
+            }
+    for dsg in corpus:
+        data["corpus"].append(negra_to_json(dsg, terminals, terminal_labeling=terminal_labeling))
+    return data
+
+
 __all__ = ["sentence_names_to_hybridtrees", "serialize_hybridtrees_to_negra", "hybridtree_to_sentence_name",
-           "serialize_acyclic_dogs_to_negra", "serialize_hybrid_dag_to_negra"]
+           "serialize_acyclic_dogs_to_negra", "serialize_hybrid_dag_to_negra", "negra_to_json", "export_corpus_to_json"]
