@@ -460,3 +460,85 @@ def print_partitioning(part, level=0):
     print(' ' * level, root)
     for child in children:
         print_partitioning(child, level + 1)
+
+
+cdef set compute_highest_nodes(set nodes, ref_bin):
+    working_set = set(nodes)
+    highest_nodes = set(nodes)
+    cdef bint changed = True
+    while changed:
+        changed = False
+        add_later = set()
+        for node in working_set:
+            if ref_bin.parent(node):
+                parent = ref_bin.parent(node)
+                if parent not in working_set  and parent not in add_later \
+                        and all([child in working_set for child in ref_bin.children(parent)]):
+                    changed = True
+                    add_later.add(parent)
+                    for child in ref_bin.children(parent):
+                        highest_nodes.remove(child)
+                    highest_nodes.add(parent)
+        working_set = working_set.union(add_later)
+    return highest_nodes
+
+
+cdef int depth(node, bin_tree):
+        if node in bin_tree.root:
+            return 0
+        parent = bin_tree.parent(node)
+        assert parent
+        return 1 + depth(parent, bin_tree)
+
+
+cpdef dict compute_candidates(sub_part, dict candidates, root, int fanout):
+        sub_root, sub_children = sub_part
+        rest = remove_spans_from_spans(root, sub_root)
+        if n_spans(sub_root) <= fanout and n_spans(rest) <= fanout:
+            candidates[frozenset(sub_root)] = sub_children
+        for sub_child in sub_children:
+            compute_candidates(sub_child, candidates, root, fanout)
+
+
+cpdef fanout_limit_partitioning_with_guided_binarization(part, int fanout, ref_bin):
+    """
+    :type part:
+    :type fanout: int
+    :type ref_bin: HybridTree
+    """
+    root, children = part
+
+    if len(root) <= 1:
+        return part
+
+    cdef dict candidates = {}
+
+    for child in children:
+        compute_candidates(child, candidates, root, fanout)
+
+    min_candidate = None
+    cdef int min_depth = 9999999
+
+    assert candidates
+
+    cdef int high_depth
+    for candidate in candidates:
+        # find corresponding node in ref_bin
+        nodes = {ref_bin.index_node(idx + 1) for idx in candidate}
+        highest_nodes = compute_highest_nodes(nodes, ref_bin)
+        high_depth = min([depth(node, ref_bin) for node in highest_nodes])
+
+        # print(candidate, nodes, highest_nodes, high_depth)
+
+        if high_depth < min_depth:
+            min_depth = high_depth
+            min_candidate = candidate
+
+    # print(min_candidate, min_depth)
+    assert min_candidate
+    min_rest = remove_spans_from_spans(root, min_candidate)
+    child2 = restrict_part([(min_rest, children)], min_rest)[0]
+    child1_restrict = fanout_limit_partitioning_with_guided_binarization(
+        (min_candidate, candidates[min_candidate]), fanout, ref_bin)
+    child2_restrict = fanout_limit_partitioning_with_guided_binarization(child2, fanout, ref_bin)
+    return root, sort_part(child1_restrict, child2_restrict)

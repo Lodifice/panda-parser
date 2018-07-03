@@ -7,6 +7,9 @@ import sys
 import unittest
 from collections import defaultdict
 from math import e
+import corpora.negra_parse as np
+import tempfile
+import subprocess
 
 from dependency.induction import induce_grammar
 from grammar.induction.recursive_partitioning import left_branching, right_branching, cfg, \
@@ -16,9 +19,12 @@ from dependency.labeling import the_labeling_factory
 from grammar.linearization import linearize
 from grammar.dcp import DCP_string
 from hybridtree.general_hybrid_tree import HybridTree
-from hybridtree.monadic_tokens import CoNLLToken, construct_conll_token
+from hybridtree.constituent_tree import ConstituentTree
+from hybridtree.monadic_tokens import CoNLLToken, construct_conll_token, ConstituentCategory, ConstituentTerminal, construct_constituent_token
 from parser.cpp_cfg_parser.parser_wrapper import CFGParser
 from grammar.lcfrs_derivation import derivation_to_hybrid_tree
+from constituent.induction import fringe_extract_lcfrs
+from itertools import product
 
 try:
     from parser.fst.fst_export import compile_wfst_from_right_branching_grammar, fsa_from_list_of_symbols, compose, shortestpath, shortestdistance, retrieve_rules, PolishDerivation, ReversePolishDerivation, compile_wfst_from_left_branching_grammar, local_rule_stats, paths, LeftBranchingFSTParser
@@ -29,6 +35,8 @@ except ModuleNotFoundError:
 from parser.sDCPevaluation.evaluator import DCP_evaluator, dcp_to_hybridtree
 from parser.naive.parsing import LCFRS_parser
 from tests.test_multiroot import multi_dep_tree
+from grammar.induction.decomposition import fanout_limit_partitioning_with_guided_binarization
+from grammar.lcfrs import LCFRS
 
 
 class InductionTest(unittest.TestCase):
@@ -343,6 +351,175 @@ class InductionTest(unittest.TestCase):
 
             print(h_tree_2)
 
+    def test_generalization(self):
+        tree = hybrid_tree_3()
+        print(tree)
+        print(list(map(lambda node: node.form(), tree.token_yield())))
+
+
+        # rec_part = right_branching(tree)
+        # rec_part_1 = cfg(tree)
+        # print(rec_part_1)
+        rec_part = the_recursive_partitioning_factory().get_partitioning('fanout-1-left-to-right')[0](tree)
+        print(rec_part)
+        # rec_part = left_branching(tree)
+        # rec_part = cfg(tree)
+
+        for naming in ['child', 'strict', 'strict-markov-v-1-h-0', 'strict-markov-v-1-h-1']:
+            grammar = fringe_extract_lcfrs(tree, rec_part, naming=naming)
+
+            if naming.startswith('strict-markov-v-1'):
+                print(naming)
+                print(grammar)
+
+            parser = LCFRS_parser(grammar)
+
+            for x in range(0, 10):
+                sentence = ['ART'] + x * ['ADJA'] + ['NN']
+                parser.set_input(sentence)
+                parser.parse()
+
+                # print(sentence, "Recognized:", parser.recognized())
+                if naming == 'child':
+                    rec = x > 0
+                elif naming == 'strict':
+                    rec = x == 3
+                elif naming == 'strict-markov-v-1-h-1':
+                    rec = x > 0
+                else:
+                    rec = True
+                self.assertEqual(rec, parser.recognized())
+
+                parser.clear()
+
+            sentence = ['ART'] + ['NN'] + ['ADJA']
+            parser.set_input(sentence)
+            parser.parse()
+            print(sentence, "Recognized:", parser.recognized())
+
+    def test_generalization_2(self):
+        tree = hybrid_tree_4()
+        print(tree)
+        print(list(map(lambda node: node.form(), tree.token_yield())))
+
+        _, path = tempfile.mkstemp(suffix='.export')
+        with open(path, 'w') as f:
+            lines = np.serialize_hybridtrees_to_negra([tree], 1, 500)
+            f.writelines(lines)
+
+        _, path_bin = tempfile.mkstemp(suffix='.export')
+        subprocess.call("discodop treetransforms --binarize --headrules".split() + ["util/negra.headrules", path, path_bin])
+
+        corpus = np.sentence_names_to_hybridtrees(['1'], path_bin)
+
+        tree_bin = corpus[0]
+        print(tree_bin)
+
+        rec_part = fanout_limit_partitioning_with_guided_binarization(direct_extraction(tree), 1, tree_bin)
+        print(rec_part)
+
+        subprocess.call(["rm", path])
+        subprocess.call(["rm", path_bin])
+
+        # rec_part = right_branching(tree)
+        # rec_part_1 = cfg(tree)
+        # print(rec_part_1)
+        # rec_part = the_recursive_partitioning_factory().get_partitioning('fanout-1-left-to-right')[0](tree)
+        # print(rec_part)
+        # rec_part = left_branching(tree)
+        # rec_part = cfg(tree)
+
+        for naming in ['child', 'strict', 'strict-markov-v-1-h-0', 'strict-markov-v-1-h-1']:
+            grammar = fringe_extract_lcfrs(tree, rec_part, naming=naming)
+
+            if True or naming.startswith('strict-markov-v-1'):
+                print(naming)
+                print(grammar)
+
+            parser = LCFRS_parser(grammar)
+
+            for x, y in product(range(0, 5), range(0, 5)):
+                sentence = ['ART'] + x * ['ADJA'] + ['NN'] + y * ['APPR', 'NN']
+                parser.set_input(sentence)
+                parser.parse()
+
+                print(sentence, "Recognized:", parser.recognized())
+                if naming == 'child':
+                    rec = x >= 0 and y > 0
+                elif naming == 'strict':
+                    rec = x == 3 and y == 3
+                elif naming == 'strict-markov-v-1-h-1':
+                    rec = x > 0 and y > 0
+                else:
+                    rec = True
+                self.assertEqual(rec, parser.recognized())
+
+                parser.clear()
+
+            sentence = ['ART'] + ['NN'] + ['ADJA']
+            parser.set_input(sentence)
+            parser.parse()
+            print(sentence, "Recognized:", parser.recognized())
+
+    def test_induction_on_corpus(self):
+        LIMIT = 100  # max is 5048
+        CORPUS_PATH = 'res/TIGER/tiger21/tigerdev_root_attach.export'
+        sent_ids = [str(i) for i in range(1, LIMIT * 10 + 2) if i % 10 == 1]
+
+        # path_bin = '/tmp/tmpazyt5p3e.export'
+        _, path_bin = tempfile.mkstemp(suffix='.export')
+        subprocess.call(
+            "discodop treetransforms --binarize --headrules".split() + ["util/negra.headrules", CORPUS_PATH, path_bin])
+
+        corpus = np.sentence_names_to_hybridtrees(sent_ids, CORPUS_PATH, disconnect_punctuation=False, add_vroot=True)
+        bin_corpus = np.sentence_names_to_hybridtrees(sent_ids, path_bin, disconnect_punctuation=False, add_vroot=True)
+
+        grammar = LCFRS("START")
+        fanout = 1
+        naming = 'strict-markov-v-1-h-1'
+        tree_counter = 0
+        def f(token):
+            return token.form()
+        for tree, bin_tree in zip(corpus, bin_corpus):
+            self.assertListEqual(list(map(f, tree.token_yield())), list(map(f, bin_tree.token_yield())))
+            rec_part_direct = tree.recursive_partitioning()
+            rec_part = fanout_limit_partitioning_with_guided_binarization(rec_part_direct, fanout, bin_tree)
+            try:
+                tree_grammar = fringe_extract_lcfrs(tree, rec_part, naming, isolate_pos=True)
+                grammar.add_gram(tree_grammar)
+            except IndexError:
+                print(tree)
+                print(bin_tree)
+                print(rec_part)
+            tree_counter += 1
+
+        print("Rules", len(grammar.rules()), "Nonterminals", len(grammar.nonts()))
+        print(tree_counter)
+        grammar.make_proper()
+
+        parser = CFGParser(grammar)
+
+        _, result_corpus = tempfile.mkstemp(suffix='.export')
+
+        print("Parsing. Writing results to", result_corpus)
+
+        with open(result_corpus, 'w') as rc:
+            for tree in corpus:
+                tokens = copy.deepcopy(tree.token_yield())
+                parser.set_input([token.pos() for token in tokens])
+                parser.parse()
+                self.assertTrue(parser.recognized())
+
+                result_tree = ConstituentTree(tree.sent_label())
+
+                result_tree = parser.dcp_hybrid_tree_best_derivation(result_tree, tokens, ignore_punctuation=False,
+                                                                     construct_token=construct_constituent_token)
+                self.assertTrue(result_tree is not None)
+
+                result_tree.strip_vroot()
+                rc.writelines(np.serialize_hybridtrees_to_negra([result_tree], 1, 500, use_sentence_names=True))
+                parser.clear()
+
 
 def hybrid_tree_1():
     tree = HybridTree()
@@ -372,6 +549,44 @@ def hybrid_tree_2():
     tree2.add_to_root('v')
     tree2.reorder()
     return tree2
+
+
+def hybrid_tree_3():
+    tree = ConstituentTree()
+    tree.add_node('v', ConstituentCategory('NP'))
+    tree.add_node('v1', ConstituentTerminal('eine', 'ART'), order=True)
+    tree.add_node('v3', ConstituentTerminal('kluge', 'ADJA'), order=True)
+    tree.add_node('v4', ConstituentTerminal('glückliche', 'ADJA'), order=True)
+    tree.add_node('v5', ConstituentTerminal('schöne', 'ADJA'), order=True)
+    tree.add_node('v2', ConstituentTerminal('Frau', 'NN'), order=True)
+    for i in range(1, 6):
+        tree.add_child('v', 'v' + str(i))
+    tree.add_to_root('v')
+    tree.reorder()
+    return tree
+
+
+def hybrid_tree_4():
+    tree = hybrid_tree_3()
+    tree.add_node('v6', ConstituentCategory('PP'))
+    tree.add_node('v61', ConstituentTerminal('mit', 'APPR'), order=True)
+    tree.add_node('v62', ConstituentTerminal('Verantwortung', 'NN'), order=True)
+    tree.add_child('v', 'v6')
+    tree.add_child('v6', 'v61')
+    tree.add_child('v6', 'v62')
+    tree.add_node('v7', ConstituentCategory('PP'))
+    tree.add_node('v71', ConstituentTerminal('aus', 'APPR'), order=True)
+    tree.add_node('v72', ConstituentTerminal('Deutschland', 'NN'), order=True)
+    tree.add_child('v', 'v7')
+    tree.add_child('v7', 'v71')
+    tree.add_child('v7', 'v72')
+    tree.add_node('v8', ConstituentCategory('PP'))
+    tree.add_node('v81', ConstituentTerminal('ohne', 'APPR'), order=True)
+    tree.add_node('v82', ConstituentTerminal('Angst', 'NN'), order=True)
+    tree.add_child('v', 'v8')
+    tree.add_child('v8', 'v81')
+    tree.add_child('v8', 'v82')
+    return tree
 
 
 if __name__ == '__main__':
