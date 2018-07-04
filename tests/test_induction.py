@@ -22,6 +22,7 @@ from hybridtree.general_hybrid_tree import HybridTree
 from hybridtree.constituent_tree import ConstituentTree
 from hybridtree.monadic_tokens import CoNLLToken, construct_conll_token, ConstituentCategory, ConstituentTerminal, construct_constituent_token
 from parser.cpp_cfg_parser.parser_wrapper import CFGParser
+from parser.discodop_parser.parser import DiscodopKbestParser
 from grammar.lcfrs_derivation import derivation_to_hybrid_tree
 from constituent.induction import fringe_extract_lcfrs
 from itertools import product
@@ -35,8 +36,9 @@ except ModuleNotFoundError:
 from parser.sDCPevaluation.evaluator import DCP_evaluator, dcp_to_hybridtree
 from parser.naive.parsing import LCFRS_parser
 from tests.test_multiroot import multi_dep_tree
-from grammar.induction.decomposition import fanout_limit_partitioning_with_guided_binarization
+from grammar.induction.decomposition import fanout_limit_partitioning_with_guided_binarization, print_partitioning, n_spans
 from grammar.lcfrs import LCFRS
+from constituent.dummy_tree import flat_dummy_constituent_tree
 
 
 class InductionTest(unittest.TestCase):
@@ -461,10 +463,46 @@ class InductionTest(unittest.TestCase):
             parser.parse()
             print(sentence, "Recognized:", parser.recognized())
 
+    def check_partitioning(self, partitioning, sent_length, fanout):
+        r, _ = partitioning
+        self.assertSetEqual(r, {i for i in range(sent_length)})
+
+        def check_recursive(part, test):
+            root, children = part
+            if len(root) == 1:
+                self.assertListEqual([], children)
+                return
+            test.assertLessEqual(n_spans(root), fanout)
+            x = set()
+            for i, c1 in enumerate(children):
+                x = x.union(c1[0])
+                for j, c2 in enumerate(children):
+                    if i != j:
+                        test.assertEqual(0, len(c1[0] & c2[0]))
+            if not root == x:
+                print(root)
+                print(x)
+                print(part)
+            test.assertSetEqual(root, x)
+            for c in children:
+                check_recursive(c, test)
+
+        check_recursive(partitioning, self)
+
     def test_induction_on_corpus(self):
-        LIMIT = 100  # max is 5048
+        """
+        Test the recursive partitioning transformation with guided binarization on a small corpus.
+        """
+        LIMIT = 500  # max is 5048
         CORPUS_PATH = 'res/TIGER/tiger21/tigerdev_root_attach.export'
         sent_ids = [str(i) for i in range(1, LIMIT * 10 + 2) if i % 10 == 1]
+
+        PARSER = DiscodopKbestParser
+        # PARSER = CFGParser  # todo CFGParser seems to be incomplete
+
+        REC_PART = "guide-bin"
+        # REC_PART = "fanout-1-left-to-right"
+        cfg_left_to_right = the_recursive_partitioning_factory().get_partitioning('fanout-1-left-to-right')[0]
 
         # path_bin = '/tmp/tmpazyt5p3e.export'
         _, path_bin = tempfile.mkstemp(suffix='.export')
@@ -475,17 +513,36 @@ class InductionTest(unittest.TestCase):
         bin_corpus = np.sentence_names_to_hybridtrees(sent_ids, path_bin, disconnect_punctuation=False, add_vroot=True)
 
         grammar = LCFRS("START")
-        fanout = 1
-        naming = 'strict-markov-v-1-h-1'
+        FANOUT = 2
+        NAMING = 'strict-markov-v-1-h-1'
         tree_counter = 0
         def f(token):
             return token.form()
         for tree, bin_tree in zip(corpus, bin_corpus):
             self.assertListEqual(list(map(f, tree.token_yield())), list(map(f, bin_tree.token_yield())))
-            rec_part_direct = tree.recursive_partitioning()
-            rec_part = fanout_limit_partitioning_with_guided_binarization(rec_part_direct, fanout, bin_tree)
+            if REC_PART == "guide-bin":
+                rec_part_direct = tree.recursive_partitioning()
+                rec_part = fanout_limit_partitioning_with_guided_binarization(rec_part_direct, FANOUT, bin_tree)
+            else:
+                rec_part = cfg_left_to_right(tree)
+            self.check_partitioning(rec_part, len(tree.id_yield()), FANOUT)
+
             try:
-                tree_grammar = fringe_extract_lcfrs(tree, rec_part, naming, isolate_pos=True)
+                tree_grammar = fringe_extract_lcfrs(tree, rec_part, NAMING, isolate_pos=False)
+
+                tree_grammar_parser = PARSER(tree_grammar)
+                tree_grammar_parser.set_input([token.pos() for token in tree.token_yield()])
+                tree_grammar_parser.parse()
+                if not tree_grammar_parser.recognized():
+                    print(tree_grammar)
+                    print(tree.sent_label())
+                    print(tree)
+                    print(tree_grammar_parser.input)
+                    print(len(tree.id_yield()))
+                    print_partitioning(rec_part)
+
+                self.assertTrue(tree_grammar_parser.recognized())
+
                 grammar.add_gram(tree_grammar)
             except IndexError:
                 print(tree)
@@ -497,17 +554,22 @@ class InductionTest(unittest.TestCase):
         print(tree_counter)
         grammar.make_proper()
 
-        parser = CFGParser(grammar)
+        parser = PARSER(grammar)
 
         _, result_corpus = tempfile.mkstemp(suffix='.export')
 
-        print("Parsing. Writing results to", result_corpus)
+        print("Parsing training sentences. Writing results to", result_corpus)
 
         with open(result_corpus, 'w') as rc:
             for tree in corpus:
                 tokens = copy.deepcopy(tree.token_yield())
                 parser.set_input([token.pos() for token in tokens])
                 parser.parse()
+
+                if not parser.recognized():
+                    print(list(map(str, tokens)))
+                    print(tree)
+
                 self.assertTrue(parser.recognized())
 
                 result_tree = ConstituentTree(tree.sent_label())
@@ -519,6 +581,41 @@ class InductionTest(unittest.TestCase):
                 result_tree.strip_vroot()
                 rc.writelines(np.serialize_hybridtrees_to_negra([result_tree], 1, 500, use_sentence_names=True))
                 parser.clear()
+
+        _, result_corpus = tempfile.mkstemp(prefix='sys_', suffix='.export')
+        _, gold_corpus = tempfile.mkstemp(prefix='gold_', suffix='.export')
+
+        TEST_LIMIT = 100  # max is 5048
+        sent_ids = [str(i) for i in range(LIMIT * 10 + 1, (LIMIT + TEST_LIMIT) * 10 + 2) if i % 10 == 1]
+        corpus = np.sentence_names_to_hybridtrees(sent_ids, CORPUS_PATH, disconnect_punctuation=False, add_vroot=True)
+
+        print("Parsing dev sentences. Writing results to", result_corpus)
+        with open(result_corpus, 'w') as rc, open(gold_corpus, 'w') as gc:
+            fails = 0
+            for tree in corpus:
+                tokens = copy.deepcopy(tree.token_yield())
+                parser.set_input([token.pos() for token in tokens])
+                parser.parse()
+
+                if parser.recognized():
+                    result_tree = ConstituentTree(tree.sent_label())
+
+                    result_tree = parser.dcp_hybrid_tree_best_derivation(result_tree, tokens, ignore_punctuation=False,
+                                                                         construct_token=construct_constituent_token)
+                    self.assertTrue(result_tree is not None)
+
+                else:
+                    fails += 1
+                    result_tree = flat_dummy_constituent_tree(tokens, tokens, None, 'VROOT', label=tree.sent_label())
+
+                result_tree.strip_vroot()
+                rc.writelines(np.serialize_hybridtrees_to_negra([result_tree], 1, 500, use_sentence_names=True))
+                tree.strip_vroot()
+                gc.writelines(np.serialize_hybridtrees_to_negra([tree], 1, 500, use_sentence_names=True))
+                parser.clear()
+            print("Parse failures:", fails)
+
+        subprocess.call(["discodop", "eval", gold_corpus, result_corpus, "util/proper.prm"])
 
 
 def hybrid_tree_1():

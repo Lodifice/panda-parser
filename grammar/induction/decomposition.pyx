@@ -2,6 +2,7 @@ from __future__ import print_function
 import random
 from libcpp.vector cimport vector
 from dependency.top_bottom_max import top_max, bottom_max
+from collections import OrderedDict
 
 # Auxiliary routines for dealing with spans in an input string.
 
@@ -491,14 +492,13 @@ cdef int depth(node, bin_tree):
         return 1 + depth(parent, bin_tree)
 
 
-cpdef dict compute_candidates(sub_part, dict candidates, root, int fanout):
-        sub_root, sub_children = sub_part
+cpdef compute_candidates(agenda, candidates, root, int fanout):
+    while agenda:
+        sub_root, sub_children = agenda[0]
         rest = remove_spans_from_spans(root, sub_root)
         if n_spans(sub_root) <= fanout and n_spans(rest) <= fanout:
             candidates[frozenset(sub_root)] = sub_children
-        for sub_child in sub_children:
-            compute_candidates(sub_child, candidates, root, fanout)
-
+        agenda = agenda[1:] + sub_children
 
 cpdef fanout_limit_partitioning_with_guided_binarization(part, int fanout, ref_bin):
     """
@@ -511,10 +511,9 @@ cpdef fanout_limit_partitioning_with_guided_binarization(part, int fanout, ref_b
     if len(root) <= 1:
         return part
 
-    cdef dict candidates = {}
+    candidates = OrderedDict()
 
-    for child in children:
-        compute_candidates(child, candidates, root, fanout)
+    compute_candidates(list(children), candidates, root, fanout)
 
     min_candidate = None
     cdef int min_depth = 9999999
