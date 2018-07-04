@@ -49,10 +49,13 @@ def expand_spans(spans):
 # A recursive partitioning is represented as a pair of ints
 # and a list of recursive partitionings.
 
-# E.g. (set([0, 1]), [(set([0]), []), (set([1]), [])])
-# len: int
-# return: recursive partitioning
+
 def left_branching_partitioning(int len):
+    """
+    :param len: length of sentence
+    :type len: int
+    :return: left-branching recursive partitioning of length **len**
+    """
     if len == 0:
         return set(), []
     elif len == 1:
@@ -64,6 +67,11 @@ def left_branching_partitioning(int len):
 
 
 def right_branching_partitioning(int len):
+    """
+    :param len: length of sentence
+    :type len: int
+    :return: right-branching recursive partitioning of length **len**
+    """
     return right_branching_partitioning_recur(0, len)
 
 
@@ -78,14 +86,16 @@ def right_branching_partitioning_recur(int low, int high):
             right_branching_partitioning_recur(low + 1, high)])
 
 
-# Transform existing partitioning to limit number of
-# spans.
-# Breadth-first search among descendants for subpartitioning
-# that stays within fanout.
-# part: recursive partitioning
-# fanout: int
-# return: recursive partitioning
 def fanout_limited_partitioning(part, int fanout):
+    """
+    :param part: recursive partitioning
+    :param fanout: maximum fanout
+    :type fanout: int
+    :return: binarized recursive partitioning with fanout <= **fanout**
+    Transform existing partitioning to limit number of spans.
+    Breadth-first search among descendants (from right to left) for subpartitioning that stays within fanout.
+    """
+
     (root, children) = part
     agenda = children[::-1]  # reversed to favour left branching
     while len(agenda) > 0:
@@ -106,15 +116,15 @@ def fanout_limited_partitioning(part, int fanout):
     return part
 
 
-# Transform existing partitioning to limit number of
-# spans.
-# Breadth-first search among descendants for subpartitioning
-# that stays within fanout.
-# left-to-right breadth first-search instead of right-to-left
-# part: recursive partitioning
-# fanout: int
-# return: recursive partitioning
 def fanout_limited_partitioning_left_to_right(part, int fanout):
+    """
+    :param part: recursive partitioning
+    :param fanout: maximum fanout
+    :type fanout: int
+    :return: binarized recursive partitioning with fanout <= **fanout**
+    Transform existing partitioning to limit number of spans.
+    Breadth-first search among descendants (left to right) for subpartitioning that stays within fanout.
+    """
     (root, children) = part
     agenda = children  
     while len(agenda) > 0:
@@ -135,13 +145,15 @@ def fanout_limited_partitioning_left_to_right(part, int fanout):
     return part
 
 
-# Transform existing partitioning to limit number of
-# spans.
-# Choose position p such that p = argmax |part(p)|
-# part: recursive partitioning
-# fanout: int
-# return: recursive partitioning
 def fanout_limited_partitioning_argmax(part, int fanout):
+    """
+    :param part: recursive partitioning
+    :param fanout: maximum fanout
+    :type fanout: int
+    :return: binarized recursive partitioning with fanout <= **fanout**
+    Transform existing partitioning to limit number of spans.
+    Choose position p such that p = argmax |part(p)|
+    """
     (root, children) = part
     if children == []:
         return part
@@ -170,18 +182,19 @@ def fanout_limited_partitioning_argmax(part, int fanout):
     return root, sort_part(child1_restrict, child2_restrict)
 
 
-
-# Transform existing partitioning to limit number of
-# spans.
-# Choose position p such that no new nonterminal is added to grammar if possible.
-# part: recursive partitioning
-# fanout: int
-# tree: HybridTree
-# nont_labelling: AbstractLabeling
-# nonts: list of nonterminals
-# return: recursive partitioning
-
 def fanout_limited_partitioning_no_new_nont(part, fanout, tree, nonts, nont_labelling, fallback):
+    """
+    :param part: recursive partitioning
+    :type fanout: int
+    :type tree: HybridTree
+    :param nonts: list/set of nonterminals
+    :type nont_labelling: AbstractLabeling
+    :param fallback: fallback strategy if no node can safely be choosen [-rtl,-ltr,-argmax,-random]
+    :type fallback: str
+    :return: binarized recursive partitioning with fanout <= **fanout**
+    Transform existing partitioning to limit number of spans.
+    Choose position p such that no new nonterminal is added to grammar if possible.
+    """
     (root, children) = part
     agenda = children
 
@@ -242,15 +255,19 @@ def fanout_limited_partitioning_no_new_nont(part, fanout, tree, nonts, nont_labe
     else:
         return fallback_random(part, fanout, tree, nonts, nont_labelling, fallback)
 
-#Fallback function if fanout_limited_partitioning_no_new_nont_rec has 
-#not found a position corresponding to an existing nonterminal.
-# part: recursive partitioning
-# fanout: int
-# tree: HybridTree
-# nont_labelling: AbstractLabeling
-# nonts: list of nonterminals
-# return: recursive partitioning
+
 def fallback_random(part, fanout, tree, nonts, nont_labelling, fallback):
+    """
+    :param part: recursive partitioning
+    :param fanout: maximum fanout
+    :type fanout: int
+    :type tree: HybridTree
+    :param nonts:  list/set of nonterminals
+    :type nont_labelling: AbstractLabeling
+    :return: binarized recursive partitioning with fanout <= **fanout**
+    Fallback function if fanout_limited_partitioning_no_new_nont_rec has
+    not found a position corresponding to an existing nonterminal.
+    """
     (root, children) = part
     agenda = children
     possibleChoices = []
@@ -276,15 +293,19 @@ def fallback_random(part, fanout, tree, nonts, nont_labelling, fallback):
     child2_restrict = fanout_limited_partitioning_no_new_nont(child2, fanout, tree, nonts, nont_labelling, fallback)
     return root, sort_part(child1_restrict, child2_restrict)
 
-#Fallback function if fanout_limited_partitioning_no_new_nont_rec has 
-#not found a position corresponding to an existing nonterminal.
-# part: recursive partitioning
-# fanout: int
-# tree: HybridTree
-# nont_labelling: AbstractLabeling
-# nonts: list of nonterminals
-# return: recursive partitioning
+
 def fallback_argmax(part, fanout, tree, nonts, nont_labelling, fallback):
+    """
+    :param part: recursive partitioning
+    :param fanout: maximum fanout
+    :type fanout: int
+    :type tree: HybridTree
+    :param nonts:  list/set of nonterminals
+    :type nont_labelling: AbstractLabeling
+    :return: binarized recursive partitioning with fanout <= **fanout**
+    Fallback function if fanout_limited_partitioning_no_new_nont_rec has
+    not found a position corresponding to an existing nonterminal.
+    """
     (root, children) = part
     if children == []:
         return part
@@ -312,15 +333,19 @@ def fallback_argmax(part, fanout, tree, nonts, nont_labelling, fallback):
     child2_restrict = fanout_limited_partitioning_no_new_nont(child2, fanout, tree, nonts, nont_labelling, fallback)
     return root, sort_part(child1_restrict, child2_restrict)
 
-#Fallback function if fanout_limited_partitioning_no_new_nont_rec has 
-#not found a position corresponding to an existing nonterminal.
-# part: recursive partitioning
-# fanout: int
-# tree: HybridTree
-# nont_labelling: AbstractLabeling
-# nonts: list of nonterminals
-# return: recursive partitioning
+
 def fallback_ltr(part, fanout, tree, nonts, nont_labelling, fallback):
+    """
+    :param part: recursive partitioning
+    :param fanout: maximum fanout
+    :type fanout: int
+    :type tree: HybridTree
+    :param nonts:  list/set of nonterminals
+    :type nont_labelling: AbstractLabeling
+    :return: binarized recursive partitioning with fanout <= **fanout**
+    Fallback function if fanout_limited_partitioning_no_new_nont_rec has
+    not found a position corresponding to an existing nonterminal.
+    """
     (root, children) = part
     agenda = children  
     while len(agenda) > 0:
@@ -340,15 +365,19 @@ def fallback_ltr(part, fanout, tree, nonts, nont_labelling, fallback):
         agenda = next_agenda
     return part
 
-#Fallback function if fanout_limited_partitioning_no_new_nont_rec has 
-#not found a position corresponding to an existing nonterminal.
-# part: recursive partitioning
-# fanout: int
-# tree: HybridTree
-# nont_labelling: AbstractLabeling
-# nonts: list of nonterminals
-# return: recursive partitioning
+
 def fallback_rtl(part, fanout, tree, nonts, nont_labelling, fallback):
+    """
+    :param part: recursive partitioning
+    :param fanout: maximum fanout
+    :type fanout: int
+    :type tree: HybridTree
+    :param nonts:  list/set of nonterminals
+    :type nont_labelling: AbstractLabeling
+    :return: binarized recursive partitioning with fanout <= **fanout**
+    Fallback function if fanout_limited_partitioning_no_new_nont_rec has
+    not found a position corresponding to an existing nonterminal.
+    """
     (root, children) = part
     agenda = children[::-1]  # reversed to favour left branching
     while len(agenda) > 0:
@@ -377,6 +406,14 @@ def fallback_rtl(part, fanout, tree, nonts, nont_labelling, fallback):
 # fanout: int
 # return: recursive partitioning
 def fanout_limited_partitioning_random_choice(part, fanout):
+    """
+    :param part: recursive partitioning
+    :param fanout: maximum fanout
+    :type fanout: int
+    :return: binarized recursive partitioning with fanout <= **fanout**
+    Transform existing partitioning to limit number of spans.
+    Choose subpartitioning that stays within fanout randomly.
+    """
     (root, children) = part
     agenda = children
     possibleChoices = []
@@ -403,23 +440,31 @@ def fanout_limited_partitioning_random_choice(part, fanout):
     return root, sort_part(child1_restrict, child2_restrict)
 
 
-
-# With spans2 together covering a subset of what spans1 covers,
-# remove spans2 from spans1. 
-# spans1, spans2: list of int
-# return: set of int
 def remove_spans_from_spans(spans1, spans2):
+    """
+
+    :param spans1: list of sentence positions
+    :type spans1: list[int]
+    :param spans2: list of sentence positions
+    :type spans2: list[int]
+    :rtype: set(int)
+    Remove sentence positions in spans2 from spans1.
+    """
     set1 = set(spans1)
     set2 = set(spans2)
     return set1 - set2
 
 
-# Keep only partitionings that overlap with relevant set.
-# Restrict to that set.
-# part: recursive partitioning
-# relevant: list of int
-# return: list of recursive partitioning
 def restrict_part(part, relevant):
+    """
+
+    :param part: recursive partitioning
+    :param relevant: set or list of sentence positions
+    :type relevant:
+    :return: list of recursive partitioning
+    :rtype: list
+    Remove from each subtree of **part** to **relevant**. Remove empty subtrees and collapse unary chains.
+    """
     part_restrict = []
     for (root, children) in part:
         root_restrict = root & relevant
@@ -433,18 +478,24 @@ def restrict_part(part, relevant):
     return part_restrict
 
 
-# Number of spans.
-# l: list of int
-# return: int
 cpdef int n_spans(vector[int] l):
+    """
+    
+    :param l: list of sentence positions
+    :type l: list[int]
+    :return: minimum number of continuous intervals required to partition **l** 
+    :rtype: int 
+    """
     return len(join_spans(l))
 
 
-# For two disjoint partitionings, determine which one comes first.
-# This is determined by first position.
-# part1, part2: recursive partitioning
-# return: list of two recursive partitionings
 def sort_part(part1, part2):
+    """
+    :param part1: recursive partitioning
+    :param part2: recursive partitioning
+    :return: list of two recursive partitionings
+    For two disjoint partitionings, determine which one comes first. This is determined by first position.
+    """
     (root1, _) = part1
     (root2, _) = part2
     if sorted(root1)[0] < sorted(root2)[0]:
@@ -453,10 +504,12 @@ def sort_part(part1, part2):
         return [part2, part1]
 
 
-# For debugging, print partitioning.
-# part: recursive partitioning
-# level: int
 def print_partitioning(part, level=0):
+    """
+    :param part: recursive partitioning
+    :param level: level of indentation
+    :type level: int
+    """
     (root, children) = part
     print(' ' * level, root)
     for child in children:
@@ -484,36 +537,57 @@ cdef set compute_highest_nodes(set nodes, ref_bin):
     return highest_nodes
 
 
-cdef int depth(node, bin_tree):
-        if node in bin_tree.root:
-            return 0
-        parent = bin_tree.parent(node)
-        assert parent
-        return 1 + depth(parent, bin_tree)
+cdef int depth(node, hybrid_tree):
+    """    
+    :param node: node of **hybrid_tree**  
+    :type hybrid_tree: HybridTree
+    :return: length of path from **node** to root of **hybrid_tree**
+    :rtype: int
+    """
+    if node in hybrid_tree.root:
+        return 0
+    parent = hybrid_tree.parent(node)
+    assert parent
+    return 1 + depth(parent, hybrid_tree)
 
 
-cpdef compute_candidates(agenda, candidates, root, int fanout):
+cpdef compute_candidates(list agenda, root, int fanout):
+    """
+    :param agenda: list of partitionings
+    :type agenda: list
+    :param root: set of sentence positions
+    :type root: set[int]
+    :param fanout: maximum fanout 
+    :type fanout: int
+    :rtype: OrderedDict
+    Compute set of nodes *p* such that *fanout(p) <=* **fanout**
+    and *fanout(**root** \ p)* <= **fanout**    
+    """
+    candidates = OrderedDict()
     while agenda:
         sub_root, sub_children = agenda[0]
         rest = remove_spans_from_spans(root, sub_root)
         if n_spans(sub_root) <= fanout and n_spans(rest) <= fanout:
             candidates[frozenset(sub_root)] = sub_children
         agenda = agenda[1:] + sub_children
+    return candidates
 
 cpdef fanout_limit_partitioning_with_guided_binarization(part, int fanout, ref_bin):
     """
-    :type part:
+    :param part: recursive partitioning
+    :param fanout: maximum fanout 
     :type fanout: int
     :type ref_bin: HybridTree
+    Transform existing partitioning to limit number of spans.
+    Choose position p such that the subtree of **ref_bin** to which p corresponds
+    is rooted as high as possible (resolve nondeterminism by choosing p breadth-first left-to-right.)
     """
     root, children = part
 
     if len(root) <= 1:
         return part
 
-    candidates = OrderedDict()
-
-    compute_candidates(list(children), candidates, root, fanout)
+    candidates = compute_candidates(list(children), root, fanout)
 
     min_candidate = None
     cdef int min_depth = 9999999
