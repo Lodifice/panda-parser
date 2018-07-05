@@ -282,6 +282,8 @@ class InductionSettings:
         self.normalize = False
         self.feature_la = False
         self.feat_function = FeatureFunction()
+        self.discodop_binarization_params = ["--headrules=util/negra.headrules",
+                                             "--binarize"]
 
     def __str__(self):
         __str = "Induction Settings {\n"
@@ -463,6 +465,42 @@ class ConstituentExperiment(ScoringExperiment):
             path,
             enc=encoding, disconnect_punctuation=self.induction_settings.disconnect_punctuation, add_vroot=True,
             mode=mode)
+
+    def run_discodop_binarization(self):
+        """
+        :rtype: None
+        Binarize the training corpus using discodop. The resulting corpus is saved in resources_data
+        under the key disco_binarized_corus.
+        """
+        if self.resources_data.get('disco_binarized_corpus', None) is not None:
+            return
+        train_resource = self.resources[TRAINING]
+        if self.induction_settings.normalize:
+            train_normalized = self.normalize_corpus(train_resource.path,
+                                                     src=train_resource.type.lower(),
+                                                     dest='export',
+                                                     renumber=False)
+        else:
+            train_normalized = train_resource.path
+
+        _, second_stage = tempfile.mkstemp(suffix=".export", dir=self.directory)
+
+        subprocess.call(["discodop", "treetransforms"]
+                        + self.induction_settings.discodop_binarization_params
+                        + ["--inputfmt=export", "--outputfmt=export",
+                           train_normalized, second_stage])
+
+        disco_resource = CorpusFile(path=second_stage,
+                                    start=train_resource.start,
+                                    end=train_resource.end,
+                                    limit=train_resource.limit,
+                                    filter=train_resource.filter,
+                                    exclude=train_resource.exclude,
+                                    type=train_resource.type
+                                   )
+
+        self.resources_data['disco_binarized_corpus'] \
+            = self.read_corpus_export(disco_resource, mode="DISCO-DOP", skip_normalization=True)
 
     def read_corpus_tagged(self, resource):
         return itertools.islice(tagged_parse.parse_tagged_sentences(resource.path), resource.start, resource.limit)

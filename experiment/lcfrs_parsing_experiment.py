@@ -65,44 +65,12 @@ class LCFRSExperiment(ConstituentExperiment, SplitMergeExperiment):
 
         self.strip_vroot = False
         self.k_best = 500
-        self.disco_binarized_corpus = None
+        self.resources_data['disco_binarized_corpus'] = None
         self.dummy_flag = True
 
     @staticmethod
     def __valid_tree(obj):
         return obj.complete() and not obj.empty_fringe()
-
-    def run_discodop_binarization(self):
-        """
-        :rtype: None
-        Binarize the training corpus using discodop. The resulting corpus is saved to to the the
-        disco_binarized_corus member variable.
-        """
-        if self.disco_binarized_corpus is not None:
-            return
-        train_resource = self.resources[TRAINING]
-        if self.induction_settings.normalize:
-            train_normalized = self.normalize_corpus(train_resource.path, src=train_resource.type.lower(), renumber=False)
-        else:
-            train_normalized = train_resource.path
-
-        _, second_stage = tempfile.mkstemp(suffix=".export", dir=self.directory)
-
-        subprocess.call(["discodop", "treetransforms"]
-                        + self.induction_settings.discodop_binarization_params
-                        + ["--inputfmt=export", "--outputfmt=export",
-                           train_normalized, second_stage])
-
-        disco_resource = CorpusFile(path=second_stage,
-                                    start=train_resource.start,
-                                    end=train_resource.end,
-                                    limit=train_resource.limit,
-                                    filter=train_resource.filter,
-                                    exclude=train_resource.exclude,
-                                    type=train_resource.type
-                                   )
-
-        self.disco_binarized_corpus = self.read_corpus_export(disco_resource, mode="DISCO-DOP", skip_normalization=True)
 
     def induce_from_disco_binarized(self, htree):
         """
@@ -112,7 +80,7 @@ class LCFRSExperiment(ConstituentExperiment, SplitMergeExperiment):
         """
         self.run_discodop_binarization()
         htree_bin = None
-        for _htree in self.disco_binarized_corpus:
+        for _htree in self.resources_data['disco_binarized_corpus']:
             if _htree.sent_label() == htree.sent_label():
                 htree_bin = _htree
                 break

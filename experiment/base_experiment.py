@@ -22,7 +22,8 @@ class Experiment(object):
         self.score_name = "score"
         self.parser = None
         self.result_file = None
-        self.resources = {}
+        self.resources = {}  # to hold file paths, intervals of sentences etc.
+        self.resources_data = {}  # to hold actual lists or sets
         self.parsing_timeout = None
         self.oracle_parsing = False
         self.max_score = None
