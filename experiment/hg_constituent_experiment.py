@@ -702,10 +702,27 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
                                     isolate_pos=self.induction_settings.isolate_pos,
                                     feature_logging=features)
 
+    def additional_induction_params(self, obj):
+        if 'guided_binarization' in self.induction_settings.recursive_partitioning.__name__:
+            return {'rec_part_params':
+                    {'reference_tree': self.resources_data['binarized_corpus_dict'].get(obj.sent_label())}}
+        else:
+            return {}
+
+    def induction_preparation(self):
+        if 'guided_binarization' in self.induction_settings.recursive_partitioning.__name__:
+            if self.resources_data.get('binarized_corpus_dict', None) is None:
+                self.run_discodop_binarization()
+                self.resources_data['binarized_corpus_dict'] = {
+                    tree.sent_label(): tree for tree in self.resources_data['disco_binarized_corpus']
+                }
+
     def induce_from(self, obj, **kwargs):
         if not obj.complete() or obj.empty_fringe():
             return None, None
-        part = self.induction_settings.recursive_partitioning(obj)
+
+        rec_part_params = kwargs['rec_part_params'] if 'rec_part_params' in kwargs else {}
+        part = self.induction_settings.recursive_partitioning(obj, **rec_part_params)
 
         features = defaultdict(lambda: 0) if self.induction_settings.feature_la else None
 
