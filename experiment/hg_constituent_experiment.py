@@ -702,7 +702,7 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
                                     isolate_pos=self.induction_settings.isolate_pos,
                                     feature_logging=features)
 
-    def induce_from(self, obj):
+    def induce_from(self, obj, **kwargs):
         if not obj.complete() or obj.empty_fringe():
             return None, None
         part = self.induction_settings.recursive_partitioning(obj)

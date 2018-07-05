@@ -59,7 +59,8 @@ class Experiment(object):
         grammar = LCFRS(start=start)
         for obj in corpus:
             obj = self.preprocess_before_induction(obj)
-            obj_grammar, features = self.induce_from(obj)
+            additional_induction_params = self.additional_induction_params(obj)
+            obj_grammar, features = self.induce_from(obj, **additional_induction_params)
             if obj_grammar is None:
                 continue
             if features is None:
@@ -84,8 +85,11 @@ class Experiment(object):
     def preprocess_before_induction(self, obj):
         return obj
 
-    def induce_from(self, obj):
+    def induce_from(self, obj, **kwargs):
         assert False
+
+    def additional_induction_params(self, obj):
+        return {}
 
     def parsing_preprocess(self, obj):
         assert False
