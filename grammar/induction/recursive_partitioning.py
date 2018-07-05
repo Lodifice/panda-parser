@@ -1,5 +1,5 @@
 import re
-from grammar.induction.decomposition import left_branching_partitioning, right_branching_partitioning, fanout_limited_partitioning, fanout_limited_partitioning_left_to_right, fanout_limited_partitioning_argmax, fanout_limited_partitioning_random_choice, fanout_limited_partitioning_no_new_nont
+from grammar.induction.decomposition import left_branching_partitioning, right_branching_partitioning, fanout_limited_partitioning, fanout_limited_partitioning_left_to_right, fanout_limited_partitioning_argmax, fanout_limited_partitioning_random_choice, fanout_limited_partitioning_no_new_nont, fanout_limit_partitioning_with_guided_binarization
 from random import seed
 
 
@@ -41,39 +41,46 @@ class RecursivePartitioningFactory:
         for name in partitioning_names:
             match = re.search(r'fanout-(\d+)([-\w]*)', name)
             if match:
+                rec_par = None
                 k = int(match.group(1))
                 trans = match.group(2)
                 if trans == '': #right-to-left bfs
                     rec_par = lambda tree: fanout_k(tree, k)
                     rec_par.__name__ = 'fanout_' + str(k)
-                    partitionings.append(rec_par)
-                if trans == '-left-to-right':
+                elif trans == '-left-to-right':
                     rec_par = lambda tree: fanout_k_left_to_right(tree, k)
                     rec_par.__name__ = 'fanout_' + str(k) + '_left_to_right'
-                    partitionings.append(rec_par)
-                if trans == '-argmax':
+                elif trans == '-argmax':
                     rec_par = lambda tree: fanout_k_argmax(tree, k)
                     rec_par.__name__ = 'fanout_' + str(k) + '_argmax'
                     partitionings.append(rec_par)
-                #set seed, if random strategy is chosen
-                randMatch = re.search(r'-random-(\d*)', trans)
-                if randMatch:
-                    s = int(randMatch.group(1))
-                    seed(s)
-                    rec_par = lambda tree: fanout_k_random(tree, k)
-                    rec_par.__name__ = 'fanout_' + str(k) + '_random'
-                    partitionings.append(rec_par)
-                #set fallback strategy if no position corresponds to an existing nonterminal
-                noNewMatch = re.search(r'-no-new-nont([-\w]*)', trans)
-                if noNewMatch:
-                    fallback = noNewMatch.group(1)
-                    randMatch = re.search(r'-random-(\d*)', fallback)
+                elif trans == '-guided-binarization':
+                    rec_par = lambda tree, reference_tree: \
+                        fanout_limit_partitioning_with_guided_binarization(tree.recursive_partitioning(),
+                                                                           k,
+                                                                           reference_tree)
+                    rec_par.__name__ = 'fanout_' + str(k) + '_guided_binarization'
+                else:
+                    randMatch = re.search(r'-random-(\d*)', trans)
                     if randMatch:
+                        # set seed, if random strategy is chosen
                         s = int(randMatch.group(1))
                         seed(s)
-                        fallback = '-random'
-                    rec_par = lambda tree, nonts, nont_labelling: fanout_k_no_new_nont(tree, nonts, nont_labelling, k, fallback)
-                    rec_par.__name__ = 'fanout_' + str(k) + '_no_new_nont'
+                        rec_par = lambda tree: fanout_k_random(tree, k)
+                        rec_par.__name__ = 'fanout_' + str(k) + '_random'
+
+                    noNewMatch = re.search(r'-no-new-nont([-\w]*)', trans)
+                    if noNewMatch:
+                        # set fallback strategy if no position corresponds to an existing nonterminal
+                        fallback = noNewMatch.group(1)
+                        randMatch = re.search(r'-random-(\d*)', fallback)
+                        if randMatch:
+                            s = int(randMatch.group(1))
+                            seed(s)
+                            fallback = '-random'
+                        rec_par = lambda tree, nonts, nont_labelling: fanout_k_no_new_nont(tree, nonts, nont_labelling, k, fallback)
+                        rec_par.__name__ = 'fanout_' + str(k) + '_no_new_nont'
+                if rec_par is not None:
                     partitionings.append(rec_par)
             else:
                 rec_par = self.__partitionings[name]
