@@ -810,6 +810,8 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
     def custom_sm_options(self, builder):
         if self.rule_smooth_list is not None:
             builder.set_count_smoothing(self.rule_smooth_list, 0.5)
+        else:
+            SplitMergeExperiment.custom_sm_options(self, builder)
 
     def patch_initial_grammar(self):
         print("Merging feature splits with SCC merger.", file=self.logger)
@@ -1018,6 +1020,7 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
     parsing_limit=('only evaluate on sentences of length up to 40', 'flag'),
     k_best=('k in k-best reranking parsing mode', 'option', None, int),
     directory=('directory in which experiment is run (default: mktemp)', 'option', None, str),
+    counts_prior=('number that is added to each rule\'s expected frequency during EM training', 'option', None, float)
     )
 def main(split,
          test_mode=False,
@@ -1035,7 +1038,8 @@ def main(split,
          parsing_mode=MULTI_OBJECTIVES,
          parsing_limit=False,
          k_best=500,
-         directory=None
+         directory=None,
+         counts_prior=0.0
          ):
     induction_settings = InductionSettings()
     induction_settings.recursive_partitioning \
@@ -1051,6 +1055,7 @@ def main(split,
     experiment.organizer.em_epochs_sm = em_epochs_sm
     experiment.organizer.validator_type = "SIMPLE"
     experiment.organizer.max_sm_cycles = sm_cycles
+    experiment.counts_prior = counts_prior
 
     experiment.organizer.disable_split_merge = False
     experiment.organizer.disable_em = False

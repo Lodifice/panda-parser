@@ -77,6 +77,7 @@ class SplitMergeExperiment(Experiment):
                                  "beam_delta": 50,
                                  "pruning_k": 10000,
                                  "cfg_ctf": True}
+        self.counts_prior = 0.0
 
     def read_stage_file(self):
         # super(SplitMergeExperiment, self).read_stage_file()
@@ -254,7 +255,11 @@ class SplitMergeExperiment(Experiment):
         self.organizer.splitMergeTrainer.setEMepochs(self.organizer.em_epochs_sm, mode="smoothing")
 
     def custom_sm_options(self, builder):
-        pass
+        if self.counts_prior > 0.0:
+            rule_ids = [i for i in range(0, len(self.base_grammar.rule_index()))]
+            # print("Using count smoothing with ", self.counts_prior, file=self.logger)
+            # print(rule_ids)
+            builder.set_count_smoothing(rule_ids, self.counts_prior)
 
     def run_split_merge_cycle(self):
         if self.organizer.last_sm_cycle is None:
@@ -449,6 +454,7 @@ class SplitMergeExperiment(Experiment):
         print("k-best", self.k_best)
         print("heuristics", self.heuristics)
         print("disco-dop engine settings", self.disco_dop_params, file=file)
+        print("counts prior", self.counts_prior, file=file)
 
 
 __all__ = ["SplitMergeExperiment", "SplitMergeOrganizer"]
