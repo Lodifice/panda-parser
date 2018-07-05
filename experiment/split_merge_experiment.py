@@ -389,6 +389,7 @@ class SplitMergeExperiment(Experiment):
         # induction
         if self.stage[0] <= 1:
             training_corpus = self.read_corpus(self.resources[TRAINING])
+            self.induction_preparation()
             self.induce_grammar(training_corpus)
 
         if self.stage[0] <= 2:

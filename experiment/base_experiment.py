@@ -48,6 +48,13 @@ class Experiment(object):
         with open(self.__stage_path, "w") as f:
             json.dump(self.stage_dict, f)
 
+    def induction_preparation(self):
+        """
+        Hook to be called before grammar induction for setting up additional data sources
+        or carrying out preprocessing steps.
+        """
+        pass
+
     def induce_grammar(self, corpus, start="START"):
         grammar = LCFRS(start=start)
         for obj in corpus:
@@ -144,6 +151,7 @@ class Experiment(object):
         # induction
         if self.stage[0] <= 1:
             training_corpus = self.read_corpus(self.resources[TRAINING])
+            self.induction_preparation()
             self.induce_grammar(training_corpus)
 
         # weight training
