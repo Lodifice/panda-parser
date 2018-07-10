@@ -12,7 +12,14 @@ import pickle
 class Experiment(object):
     def __init__(self, directory=None):
         print("Inititialize Experiment")
-        self.directory = tempfile.mkdtemp() if directory is None else directory
+        if directory is None:
+            import datetime
+            now = datetime.datetime.now()
+            self.directory = tempfile.mkdtemp(
+                prefix='exp_' + '-'.join(
+                    map(str, [now.year, now.month, now.day, '-', now.hour, now.minute, now.second])))
+        else:
+            self.directory = directory
         if not os.path.isdir(self.directory):
             os.makedirs(self.directory)
         self.logger = Logger(tempfile.mkstemp(dir=self.directory, suffix='.log')[1])
