@@ -106,7 +106,8 @@ def direct_extract_lcfrs_prebinarized_recur(tree,
         if sec_child not in tree.descendants(idx):
             print(idx, "has external", sec_child)
             assert sec_child in _bot
-            dcp_term_args.append(DCP_term(DCP_string(SECEDGE), [DCP_var(-1, _bot.index(sec_child))]))
+            dcp_term_args.append(DCP_term(DCP_string(SECEDGE, edge_label=tree.sec_child_edge_labels(idx)[sec]),
+                                          [DCP_var(-1, _bot.index(sec_child))]))
 
         else:
             print(idx, "has internal", sec_child)

@@ -197,7 +197,7 @@ def dcp_to_hybriddag_recur(dcp, tree, next_idx, construct_token, cache, parent):
             else:
                 cache[dcp.arg()[0]] = self_idx = str(next_idx)
                 next_idx += 1
-            tree.add_sec_child(parent, self_idx)
+            tree.add_sec_child(parent, self_idx, head.edge_label())
             return None, next_idx
         else:
             label = head

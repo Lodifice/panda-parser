@@ -128,10 +128,9 @@ def sentence_names_to_hybridtrees(names,
                 if secedge and secedges:
                     # print(secedges)
                     for sei in range(0, len(secedges) // 2, 2):
-                        # sec_label = secedges[sei]
-                        assert secedges[sei] == edge
+                        sec_label = secedges[sei]
                         sec_parent = secedges[sei + 1]
-                        tree.add_sec_child(sec_parent, id)
+                        tree.add_sec_child(sec_parent, id, sec_label)
             elif match_term:
                 if mode == "STANDARD":
                     OFFSET = 0
@@ -163,10 +162,10 @@ def sentence_names_to_hybridtrees(names,
                     if secedge and secedges:
                         # print(secedges)
                         for sei in range(0, len(secedges) // 2, 2):
-                            # sec_label = secedges[sei]
-                            assert secedges[sei] == edge
+                            sec_label = secedges[sei]
+                            # assert secedges[sei] == edge
                             sec_parent = secedges[sei + 1]
-                            tree.add_sec_child(sec_parent, leaf_id)
+                            tree.add_sec_child(sec_parent, leaf_id, sec_label)
     negra.close()
     return trees
 
@@ -446,7 +445,7 @@ def serialize_hybrid_dag_to_negra(dsgs, counter, length, use_sentence_names=Fals
     return sentence_names
 
 
-def negra_to_json(dsg, terminal_encoding, terminal_labeling):
+def negra_to_json(dsg, terminal_encoding, terminal_labeling, delimiter=' : '):
     """
     :param dsg:
     :type dsg: HybridDag
@@ -501,9 +500,10 @@ def negra_to_json(dsg, terminal_encoding, terminal_labeling):
         def add_sec_children(node):
             assert len(dsg.sec_children(node)) == len(sec_children[node])
             nonlocal edge_idx
-            for child, (inp, outp) in zip(dsg.sec_children(node), sec_children[node]):
+            for child, (inp, outp), edge_label in zip(dsg.sec_children(node), sec_children[node], dsg.sec_child_edge_labels(node)):
                 ci, co = node_io[child]
-                label = terminal_encoding.object_index('SECEDGE')
+                label = 'SECEDGE' + delimiter + edge_label
+                label = terminal_encoding.object_index(label)
                 data['edges'].append({'id': edge_idx,
                                       'label': label,
                                       'attachment': [ci, co, inp, outp],
@@ -524,7 +524,7 @@ def negra_to_json(dsg, terminal_encoding, terminal_labeling):
         return data
 
     def string_to_graph_json(token_sequence, start_node, start_edge):
-        data = {'type': 'hypergraph',
+        return {'type': 'hypergraph',
                 'nodes': [i for i in range(start_node, start_node + len(token_sequence) + 1)],
                 'edges': [{'id': idx + start_edge,
                            'label': terminal_encoding.object_index(terminal_labeling.token_label(token)),
@@ -533,7 +533,6 @@ def negra_to_json(dsg, terminal_encoding, terminal_labeling):
                           for idx, token in enumerate(token_sequence)],
                 'ports': [start_node, start_node + len(token_sequence)]
                 }
-        return data
 
     data = {"type": "bihypergraph"}
     data["G1"] = dag_to_json()
@@ -549,13 +548,13 @@ def negra_to_json(dsg, terminal_encoding, terminal_labeling):
     return data
 
 
-def export_corpus_to_json(corpus, terminals, terminal_labeling=str):
-    data = {  "corpus": []
-            , "alignmentLabel": terminals.object_index(None)
-            , "nonterminalEdgeLabel": terminals.object_index(None)
+def export_corpus_to_json(corpus, terminals, terminal_labeling=str, delimiter=' : '):
+    data = {"corpus": [],
+            "alignmentLabel": terminals.object_index(None),
+            "nonterminalEdgeLabel": terminals.object_index(None)
             }
     for dsg in corpus:
-        data["corpus"].append(negra_to_json(dsg, terminals, terminal_labeling=terminal_labeling))
+        data["corpus"].append(negra_to_json(dsg, terminals, terminal_labeling=terminal_labeling, delimiter=delimiter))
     return data
 
 

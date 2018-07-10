@@ -506,26 +506,27 @@ class HybridDag(HybridTree):
         self._id_to_sec_children = {}
         self._sec_parents = {}
 
-    def add_sec_child(self, parent, child):
+    def add_sec_child(self, parent, child, edge_label):
         if parent in self._id_to_sec_children:
             self._id_to_sec_children[parent].append(child)
+            self._id_to_sec_child_labels[parent].append(edge_label)
         else:
             self._id_to_sec_children[parent] = [child]
+            self._id_to_sec_child_labels[parent] = [edge_label]
 
         if child in self._sec_parents and parent not in self._sec_parents[child]:
-            self._sec_parents[child].append(child)
+            self._sec_parents[child].append(parent)
         else:
             self._sec_parents[child] = [parent]
 
     def sec_children(self, node):
-        if node in self._id_to_sec_children:
-            return self._id_to_sec_children.get(node)
-        return []
+        return self._id_to_sec_children.get(node, [])
+
+    def sec_child_edge_labels(self, node):
+        return self._id_to_sec_child_labels.get(node, [])
 
     def sec_parents(self, node):
-        if node in self._sec_parents:
-            return self._sec_parents.get(node)
-        return []
+        return self._sec_parents.get(node, [])
 
 
 __all__ = ["HybridTree"]
