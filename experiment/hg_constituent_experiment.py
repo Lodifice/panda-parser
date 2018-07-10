@@ -1007,7 +1007,9 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
     quick=('run a small experiment (for testing/debugging)', 'flag'),
     unk_threshold=('threshold for unking rare words', 'option', None, int),
     recursive_partitioning=('recursive partitioning strategy', 'option', None, str),
-    nonterminal_naming_scheme=('scheme for naming nonterminals', 'option', None, str, ['strict', 'child', 'strict-markov-v-1-h-1']),
+    nonterminal_naming_scheme=('scheme for naming nonterminals', 'option', None, str,
+                               ['strict', 'child']
+                               + ['strict-markov-v-%i-h-%i' % p for p in itertools.product(range(0, 2), range(1, 4))]),
     seed=('random seed for tie-breaking after splitting', 'option', None, int),
     threads=('number of threads during expectation step (requires compilation with OpenMP flag set)', 'option', None, int),
     em_epochs=('epochs of EM before split/merge training', 'option', None, int),
