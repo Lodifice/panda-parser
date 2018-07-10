@@ -22,11 +22,10 @@ from parser.supervised_trainer.trainer import PyDerivationManager
 from grammar.lcfrs_derivation import LCFRSDerivationWrapper
 
 
-
 SCHICK_PARSER_JAR = 'HypergraphReduct-1.0-SNAPSHOT.jar'
 
 
-class MyTestCase(unittest.TestCase):
+class DagHybridGrammarTest(unittest.TestCase):
     def test_negra_to_dag_parsing(self):
         names = list(map(str, [26954]))
 
@@ -131,7 +130,7 @@ class MyTestCase(unittest.TestCase):
         grammar_path = '/tmp/lcfrs_dcp_grammar.gr'
         derivation_manager = PyDerivationManager(grammar)
 
-        with open('/tmp/lcfrs_dcp_grammar.gr', 'w') as grammar_file:
+        with open(grammar_path, 'w') as grammar_file:
             nonterminal_enc, terminal_enc = linearize(grammar, nont_labeling, term_labeling, grammar_file,
                                                       delimiter=' : ', nonterminal_encoder=derivation_manager.get_nonterminal_map())
 
@@ -188,7 +187,6 @@ class MyTestCase(unittest.TestCase):
                 print(der)
                 self.assertTrue(der.check_integrity_recursive(der.root_id(), grammar.start()))
 
-
     def test_negra_dag_small_grammar(self):
         DAG_CORPUS = 'res/tiger/tiger_full_with_sec_edges.export'
         DAG_CORPUS_BIN = 'res/tiger/tiger_full_with_sec_edges_bin_h1_v1.export'
@@ -197,7 +195,7 @@ class MyTestCase(unittest.TestCase):
             print('run the following command to create an export corpus with dags:')
             print('\tPYTHONPATH=. util/tiger_dags_to_negra.py ' +
                   'res/tiger/tiger_release_aug07.corrected.16012013.xml '
-                   + DAG_CORPUS + ' 1 50474')
+                  + DAG_CORPUS + ' 1 50474')
         self.assertTrue(os.path.exists(DAG_CORPUS))
 
         if not os.path.exists(DAG_CORPUS_BIN):

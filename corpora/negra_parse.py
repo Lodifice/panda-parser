@@ -1,16 +1,19 @@
 """Parsing/Serialization from and to the Negra export format into HybridTrees, HybridDags, and (only to)
 DeepSyntaxGraphs."""
 from __future__ import print_function, unicode_literals
+
+import codecs
+import os
+import re
+from collections import defaultdict
 from os.path import expanduser
+from typing import Iterable
+
+from graphs.dog import DeepSyntaxGraph
 from hybridtree.constituent_tree import ConstituentTree
 from hybridtree.general_hybrid_tree import HybridDag
 from hybridtree.monadic_tokens import ConstituentTerminal, ConstituentCategory
-from graphs.dog import DeepSyntaxGraph
-import re
-import codecs
-import os
 from util.enumerator import Enumerator
-from collections import defaultdict
 
 # Used only by CL experiments
 # Location of Negra corpus.
@@ -51,7 +54,7 @@ def sentence_names_to_hybridtrees(names,
                                   secedge=False):
     """
     :param names:  list of sentence identifiers
-    :type names: list[str]
+    :type names: Iterable[str]
     :param path: path to corpus
     :type path: str
     :param enc: file encoding

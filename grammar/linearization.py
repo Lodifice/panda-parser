@@ -1,9 +1,10 @@
 from __future__ import print_function
+
+from collections import defaultdict
 from sys import stdout
 
-from grammar.lcfrs import *
-from grammar.dcp import *
-from collections import defaultdict
+from grammar.dcp import DCP_visitor
+from grammar.lcfrs import LCFRS_var
 from util.enumerator import Enumerator
 
 
@@ -12,7 +13,11 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file, delimiter=
     :type grammar: LCFRS
     :param nonterminal_labeling:
     :param terminal_labeling:
-    :return:
+    :param file: file handle to write to
+    :type delimiter: str
+    :param delimiter: string used to join terminal symbol with edge label symbol
+    :type nonterminal_encoder: Enumerator
+    :param nonterminal_encoder: mapping that assigns unique non-negative integer to each nonterminal
     """
     print("Nonterminal Labeling: ", nonterminal_labeling, file=file)
     print("Terminal Labeling: ", terminal_labeling, file=file)
@@ -24,20 +29,19 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file, delimiter=
     else:
         nonterminals = nonterminal_encoder
     num_inherited_args = {}
-    num_synthezied_args = {}
+    num_synthesized_args = {}
 
     for rule in grammar.rules():
         rid = 'r%i' % (rule.get_idx() + 1)
         print(rid, 'RTG   ', nonterminals.object_index(rule.lhs().nont()), '->', file=file, end=" ")
         print(list(map(lambda nont: nonterminals.object_index(nont), rule.rhs())), ';', file=file)
-        #for rhs_nont in rule.rhs():
-        #    print nonterminals[rhs_nont],
-        print(rid , 'WEIGHT', rule.weight(), ';', file=file)
+
+        print(rid, 'WEIGHT', rule.weight(), ';', file=file)
 
         sync_index = {}
         inh_args = defaultdict(lambda: 0)
         lhs_var_counter = CountLHSVars()
-        synth_attributes = 0
+        synthesized_attributes = 0
 
         dcp_ordered = sorted(rule.dcp(), key=lambda x: (x.lhs().mem(), x.lhs().arg()))
 
@@ -45,14 +49,14 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file, delimiter=
             if dcp.lhs().mem() != -1:
                 inh_args[dcp.lhs().mem()] += 1
             else:
-                synth_attributes += 1
-            lhs_var_counter.evaluateList(dcp.rhs())
+                synthesized_attributes += 1
+            lhs_var_counter.evaluate_list(dcp.rhs())
         num_inherited_args[nonterminals.object_index(rule.lhs().nont())] = inh_args[-1] = lhs_var_counter.get_number()
-        num_synthezied_args[nonterminals.object_index(rule.lhs().nont())] = synth_attributes
+        num_synthesized_args[nonterminals.object_index(rule.lhs().nont())] = synthesized_attributes
 
         for dcp in dcp_ordered:
-            printer = OUTPUT_DCP(terminals.object_index, rule, sync_index, inh_args, delimiter=delimiter)
-            printer.evaluateList(dcp.rhs())
+            printer = DcpPrinter(terminals.object_index, rule, sync_index, inh_args, delimiter=delimiter)
+            printer.evaluate_list(dcp.rhs())
             var = dcp.lhs()
             if var.mem() == -1:
                 var_string = 's<0,%i>' % (var.arg() + 1 - inh_args[-1])
@@ -86,7 +90,7 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file, delimiter=
 
     print("Nonterminal ID, nonterminal name, fanout, #inh, #synth: ", file=file)
     max_fanout, max_inh, max_syn, max_args, fanouts, inherits, synths, args \
-        = print_index_and_stats(nonterminals, grammar, num_inherited_args, num_synthezied_args, file=file)
+        = print_index_and_stats(nonterminals, grammar, num_inherited_args, num_synthesized_args, file=file)
     print(file=file)
     print("max fanout:", max_fanout, file=file)
     print("max inh:", max_inh, file=file)
@@ -107,8 +111,8 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file, delimiter=
 
 def print_index_and_stats(nonterminal_encoder, grammar, inh, syn, file=stdout):
     fanouts = defaultdict(lambda: 0)
-    inherits = defaultdict(lambda: 0)
-    synths = defaultdict(lambda: 0)
+    inherited = defaultdict(lambda: 0)
+    synthesized = defaultdict(lambda: 0)
     args = defaultdict(lambda: 0)
     max_fanout = 0
     max_inh = 0
@@ -118,39 +122,39 @@ def print_index_and_stats(nonterminal_encoder, grammar, inh, syn, file=stdout):
         fanout = grammar.fanout(nonterminal_encoder.index_object(i))
         fanouts[fanout] += 1
         max_fanout = max(max_fanout, fanout)
-        inherits[inh[i]] += 1
+        inherited[inh[i]] += 1
         max_inh = max(max_inh, inh[i])
-        synths[syn[i]] += 1
+        synthesized[syn[i]] += 1
         max_syn = max(max_syn, syn[i])
         args[inh[i] + syn[i]] += 1
         max_args = max(max_args, inh[i] + syn[i])
         print(i, nonterminal_encoder.index_object(i), fanout, inh[i], syn[i], file=file)
-    return max_fanout, max_inh, max_syn, max_args, fanouts, inherits, synths, args
+    return max_fanout, max_inh, max_syn, max_args, fanouts, inherited, synthesized, args
 
 
-class DCP_Labels(DCP_visitor):
-    def visit_string(self, s, id):
+class DcpLabelCollector(DCP_visitor):
+    def visit_string(self, s, idx):
         self.labels.add(s)
 
-    def visit_term(self, term, id):
+    def visit_term(self, term, idx):
         """
         :type term: DCP_term
-        :param id:
+        :param idx:
         :return:
         """
         term.head().visitMe(self)
         for child in term.arg():
             child.visitMe(self)
 
-    def visit_index(self, index, id):
+    def visit_index(self, index, idx):
         """
         :type index: DCP_index
-        :param id:
+        :param idx:
         :return:
         """
         self.labels.add(index.edge_label())
 
-    def visit_variable(self, var, id):
+    def visit_variable(self, var, idx):
         pass
 
     def __init__(self):
@@ -161,31 +165,31 @@ class CountLHSVars(DCP_visitor):
     def __init__(self):
         self.__vars = set()
 
-    def visit_variable(self, var, id):
+    def visit_variable(self, var, idx):
         if var.mem() == -1:
             self.__vars.add(var)
 
-    def visit_string(self, s, id):
+    def visit_string(self, s, idx):
         pass
 
-    def visit_term(self, term, id):
+    def visit_term(self, term, idx):
         term.head().visitMe(self)
-        self.evaluateList(term.arg())
+        self.evaluate_list(term.arg())
 
-    def evaluateList(self, xs):
+    def evaluate_list(self, xs):
         for x in xs:
             x.visitMe(self)
 
-    def visit_index(self, index, id):
+    def visit_index(self, index, idx):
         pass
 
     def get_number(self):
         return len(self.__vars)
 
 
-class OUTPUT_DCP(DCP_visitor):
-    def visit_variable(self, var, id):
-        if (var.mem() != -1):
+class DcpPrinter(DCP_visitor):
+    def visit_variable(self, var, idx):
+        if var.mem() != -1:
             self.string += 'x<%i,%i> ' % (var.mem() + 1, var.arg() + 1 - self.inh_args[var.mem()])
         else:
             self.string += 'x<%i,%i> ' % (var.mem() + 1, var.arg() + 1)
@@ -198,29 +202,29 @@ class OUTPUT_DCP(DCP_visitor):
         self.inh_args = inh_args
         self.delimiter = delimiter
 
-    def visit_string(self, s, id):
+    def visit_string(self, s, idx):
         if s.edge_label():
             self.string += str(self.terminal_to_index(s.get_string() + self.delimiter + s.edge_label())) + ' '
         else:
             self.string += str(self.terminal_to_index(s.get_string()))
 
-    def visit_term(self, term, id):
+    def visit_term(self, term, idx):
         term.head().visitMe(self)
         self.string += '('
-        self.evaluateList(term.arg())
+        self.evaluate_list(term.arg())
         self.string += ') '
 
-    def evaluateList(self, list):
+    def evaluate_list(self, the_list):
         self.string += "[ "
         first = True
-        for arg in list:
+        for arg in the_list:
             if not first:
                 self.string += ', '
             arg.visitMe(self)
             first = False
         self.string += "]"
 
-    def visit_index(self, index, id):
+    def visit_index(self, index, idx):
         if not index.index() in self.sync_index:
             self.sync_index[index.index()] = len(self.sync_index) + 1
         i = 0

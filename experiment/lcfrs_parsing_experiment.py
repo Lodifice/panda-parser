@@ -236,6 +236,9 @@ def main(split,
          directory=None,
          counts_prior=0.0
          ):
+    """
+    Run an end-to-end experiment with LCFRS on constituent parsing.
+    """
     induction_settings = InductionSettings()
     induction_settings.disconnect_punctuation = False
     induction_settings.normalize = True

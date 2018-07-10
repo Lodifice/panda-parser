@@ -2,10 +2,7 @@ from __future__ import print_function
 from ast import literal_eval
 import copy
 from collections import defaultdict
-try:
-    from functools32 import lru_cache
-except ImportError:
-    from functools import lru_cache
+from functools import lru_cache
 import os
 import pickle
 import sys
@@ -1043,6 +1040,9 @@ def main(split,
          directory=None,
          counts_prior=0.0
          ):
+    """
+    Run an end-to-end experiment with LCFRS/sDCP hybrid grammars on constituent parsing.
+    """
     induction_settings = InductionSettings()
     induction_settings.recursive_partitioning \
         = the_recursive_partitioning_factory().get_partitioning(recursive_partitioning)[0]
@@ -1142,4 +1142,5 @@ if __name__ == '__main__':
     plac.call(main)
 
 
-__all__ = ["ConstituentExperiment", "setup_corpus_resources"]
+__all__ = ["ConstituentExperiment", "setup_corpus_resources", 'MULTI_OBJECTIVES', 'BASE_GRAMMAR',
+           'MAX_RULE_PRODUCT_ONLY', 'MULTI_OBJECTIVES_INDEPENDENT', 'NEGRA']

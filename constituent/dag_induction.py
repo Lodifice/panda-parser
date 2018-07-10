@@ -1,10 +1,10 @@
 import re
 
-from grammar.lcfrs import LCFRS, LCFRS_lhs, LCFRS_var
-from grammar.dcp import DCP_rule, DCP_var, DCP_term, DCP_index, DCP_string
-from grammar.induction.terminal_labeling import PosTerminals
 from constituent.induction import BasicNonterminalLabeling
+from grammar.dcp import DCP_rule, DCP_var, DCP_term, DCP_index, DCP_string
 from grammar.induction.decomposition import join_spans
+from grammar.induction.terminal_labeling import PosTerminals
+from grammar.lcfrs import LCFRS, LCFRS_lhs, LCFRS_var
 from hybridtree.general_hybrid_tree import HybridDag
 
 START = "START"
