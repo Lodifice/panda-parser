@@ -5,6 +5,9 @@ from cython.operator cimport dereference as deref
 from grammar.derivation_interface import AbstractDerivation
 from grammar.rtg import RTG
 from parser.discodop_parser.grammar_adapter import rule_idx_from_label, striplabelre, unescape_brackets
+from discodop.containers import Chart
+from typing import Iterable
+from discodop.containers import Grammar
 
 
 cdef extern from "Trainer/TraceManager.h" namespace "Trainer":
@@ -42,7 +45,13 @@ cdef class PyDerivationManager(PyTraceManager):
             , self.edge_labels
             , False)
 
-    cpdef void convert_derivations_to_hypergraphs(self, corpus):
+    cpdef void convert_derivations_to_hypergraphs(self, corpus, float frequency=1.0):
+        """
+        :type corpus: Iterable[AbstractDerivation]
+        :param frequency: frequency with which each derivation will be accounted by EM training
+        :type frequency: float
+        Converts each derivation in **corpus** in an equivalent hypergraph and adds it to the trace manager.
+        """
         cdef shared_ptr[Hypergraph[NONTERMINAL, size_t]] hg
         cdef vector[Element[Node[NONTERMINAL]]] sources
         cdef PyElement pyElement
@@ -83,13 +92,15 @@ cdef class PyDerivationManager(PyTraceManager):
             spans = derivation.spanned_ranges(node)
             return nont, tuple(spans)
 
-    cpdef void convert_derivations_to_hypergraph(self, corpus):
+    cpdef void convert_derivations_to_hypergraph(self, corpus, float frequency=1.0):
         """
         :param corpus: nonempty iterable of derivations for the same sentence   
-        :type corpus: iterable[LCFRSDerivation]
-        Joins a list/iterator over derivations of a single sentence into a single packed hypergraph. 
+        :type corpus: Iterable[AbstractDerivation]
+        :param frequency: frequency with which the hypergraph will be accounted by EM training
+        :type frequency: float
+        Joins an iterator over derivations of a single sentence into a single packed hypergraph. 
         The nodes of the hypergraph are nonterminals from the rules annotated by the string positions they span. 
-        Duplicate edges which may arise this way are removed.  
+        Duplicate edges which may arise this way are removed.
         """
         cdef shared_ptr[Hypergraph[NONTERMINAL, size_t]] hg
         cdef vector[Element[Node[NONTERMINAL]]] sources
@@ -140,19 +151,22 @@ cdef class PyDerivationManager(PyTraceManager):
         # root
         assert root_key is not None
         pyElement = nodeMap[root_key]
-        add_hypergraph_to_trace[NONTERMINAL, size_t](self.trace_manager, hg, deref(pyElement.element), 1.0)
+        add_hypergraph_to_trace[NONTERMINAL, size_t](self.trace_manager, hg, deref(pyElement.element), frequency)
 
     cpdef Enumerator get_nonterminal_map(self):
         return self.nonterminal_map
 
-    cpdef void convert_rtgs_to_hypergraphs(self, rtgs):
+    cpdef void convert_rtgs_to_hypergraphs(self, rtgs, float frequency=1.0):
         """
-        :param rtgs: a sequence of reduct RTG of the grammar passed in the constructor, i.e.,\n 
+        :param rtgs: an iterator over reduct RTG of the grammar passed in the constructor, i.e.,\n 
                      - nonterminals are of the the form (N, X) where N is a nonterminal in grammar,\n 
                      - the initial nonterminal is the start symbol of grammar,\n 
                      - rules are of the from (N, X) -> n((N_1, X_1) … (N_k, X_k)) where 
                        N -> N_1 … N_k is the rule with idx n in grammar
-        :type rtgs: iterable[RTG]
+        :type rtgs: Iterable[RTG]
+        :param frequency: frequency with which each rtg will be accounted by EM training
+        :type frequency: float
+        Converts each RTG in an equivalent hypergraph and adds it to the trace manager.
         """
         cdef shared_ptr[Hypergraph[NONTERMINAL, size_t]] hg
         cdef vector[Element[Node[NONTERMINAL]]] sources
@@ -185,10 +199,17 @@ cdef class PyDerivationManager(PyTraceManager):
 
             # root
             pyElement = nodeMap[rtg.initial]
-            add_hypergraph_to_trace[NONTERMINAL, size_t](self.trace_manager, hg, deref(pyElement.element), 1.0)
+            add_hypergraph_to_trace[NONTERMINAL, size_t](self.trace_manager, hg, deref(pyElement.element), frequency)
             # nodeMap.clear()
 
     cpdef void convert_chart_to_hypergraph(self, chart, disco_grammar, bint debug=False) except +:
+        """
+        :param chart: a populated Chart from the discodop parser (obtained with *disco_grammar*) 
+        :type chart: Chart
+        :param disco_grammar: a discodop grammar
+        :type disco_grammar: Grammar
+        Converts the chart in an equivalent hypergraph and adds it to the trace manager.
+        """
         cdef shared_ptr[Hypergraph[NONTERMINAL, size_t]] hg
         cdef vector[Element[Node[NONTERMINAL]]] sources
         cdef PyElement pyElement

@@ -10,9 +10,9 @@ cdef class PyDerivationManager(PyTraceManager):
     cdef shared_ptr[vector[size_t]] edge_labels
     cdef Enumerator nonterminal_map
 
-    cpdef void convert_derivations_to_hypergraphs(self, corpus)
-    cpdef void convert_derivations_to_hypergraph(self, corpus)
-    cpdef void convert_rtgs_to_hypergraphs(self, rtgs)
+    cpdef void convert_derivations_to_hypergraphs(self, corpus, float frequency=?)
+    cpdef void convert_derivations_to_hypergraph(self, corpus, float frequency=?)
+    cpdef void convert_rtgs_to_hypergraphs(self, rtgs, float frequency=?)
     cpdef void convert_chart_to_hypergraph(self, chart, disco_grammar, bint debug=?) except +
 
     cpdef Enumerator get_nonterminal_map(self)
