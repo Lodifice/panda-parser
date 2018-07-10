@@ -46,8 +46,8 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file, delimiter=
                 inh_args[dcp.lhs().mem()] += 1
             else:
                 synth_attributes += 1
-            inh_args[-1] += lhs_var_counter.evaluateList(dcp.rhs())
-        num_inherited_args[nonterminals.object_index(rule.lhs().nont())] = inh_args[-1]
+            lhs_var_counter.evaluateList(dcp.rhs())
+        num_inherited_args[nonterminals.object_index(rule.lhs().nont())] = inh_args[-1] = lhs_var_counter.get_number()
         num_synthezied_args[nonterminals.object_index(rule.lhs().nont())] = synth_attributes
 
         for dcp in dcp_ordered:
@@ -55,7 +55,7 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file, delimiter=
             printer.evaluateList(dcp.rhs())
             var = dcp.lhs()
             if var.mem() == -1:
-                var_string = 's<0,%i>' %(var.arg() + 1 - inh_args[-1])
+                var_string = 's<0,%i>' % (var.arg() + 1 - inh_args[-1])
             else:
                 var_string = 's<%i,%i>' % (var.mem() + 1, var.arg() + 1)
             print('%s sDCP   %s == %s ;' % (rid, var_string, printer.string), file=file)
@@ -158,23 +158,29 @@ class DCP_Labels(DCP_visitor):
 
 
 class CountLHSVars(DCP_visitor):
+    def __init__(self):
+        self.__vars = set()
+
     def visit_variable(self, var, id):
         if var.mem() == -1:
-            return 1
-        else:
-            return 0
+            self.__vars.add(var)
 
     def visit_string(self, s, id):
-        return 0
+        pass
 
     def visit_term(self, term, id):
-        return term.head().visitMe(self) + self.evaluateList(term.arg())
+        term.head().visitMe(self)
+        self.evaluateList(term.arg())
 
     def evaluateList(self, xs):
-        return sum([x.visitMe(self) for x in xs])
+        for x in xs:
+            x.visitMe(self)
 
     def visit_index(self, index, id):
-        return 0
+        pass
+
+    def get_number(self):
+        return len(self.__vars)
 
 
 class OUTPUT_DCP(DCP_visitor):

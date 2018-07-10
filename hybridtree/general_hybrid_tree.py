@@ -502,8 +502,9 @@ class HybridTree:
 
 class HybridDag(HybridTree):
     def __init__(self, sent_label):
-        super().__init__(sent_label)
+        HybridTree.__init__(self, sent_label)
         self._id_to_sec_children = {}
+        self._id_to_sec_child_labels = {}
         self._sec_parents = {}
 
     def add_sec_child(self, parent, child, edge_label):

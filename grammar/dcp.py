@@ -104,6 +104,9 @@ class DCP_var(DCP_rhs_object):
             return False
         return self.mem() == other.mem() and self.arg() == other.arg()
 
+    def __hash__(self):
+        return hash((self.__i, self.__j))
+
 
 # Index, pointing to terminal in left (LCFRS) component of hybrid grammar.
 # Terminals are indexed in left-to-right order.
