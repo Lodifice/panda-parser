@@ -2,14 +2,18 @@
 # part of a LCFRS/DCP hybrid grammar rule.
 
 from __future__ import print_function
+
 from abc import ABCMeta, abstractmethod
+
 
 ###########################################################################
 # Parts of the rules.
 
 
-# Common interface for all objects that occur on rhs of DCP_rules
 class DCP_rhs_object:
+    """
+    Common interface for all objects that occur on rhs of DCP_rules
+    """
     __metaclass__ = ABCMeta
 
     # evaluator: DCP_visitor
@@ -25,8 +29,10 @@ class DCP_rhs_object:
         pass
 
 
-# Interface for DCP_evaluation
 class DCP_visitor:
+    """
+    Interface for DCP_evaluation
+    """
     __metaclass__ = ABCMeta
 
     @abstractmethod
@@ -67,10 +73,13 @@ class DCP_visitor:
         pass
 
 
-# Variable identifying argument (synthesized or inherited).
-# In LHS this is (-1,j) and in RHS this is (i,j),
-# for i-th member in RHS, and j-th argument.
 class DCP_var(DCP_rhs_object):
+    """
+    Variable identifying argument (synthesized or inherited).
+    In LHS this is (-1,j) and in RHS this is (i,j),
+    for i-th member in RHS, and j-th argument.
+    """
+
     # Constructor.
     # i: int
     # j: int
@@ -108,9 +117,12 @@ class DCP_var(DCP_rhs_object):
         return hash((self.__i, self.__j))
 
 
-# Index, pointing to terminal in left (LCFRS) component of hybrid grammar.
-# Terminals are indexed in left-to-right order.
 class DCP_index(DCP_rhs_object):
+    """
+    Index, pointing to terminal in left (LCFRS) component of hybrid grammar.
+    Terminals are indexed in left-to-right order.
+    """
+
     # Constructor.
     # i: int
     # edge_label: string
@@ -140,9 +152,12 @@ class DCP_index(DCP_rhs_object):
         return visitor.visit_index(self, id)
 
 
-# A terminal of DCP_rule that is not linked to some terminal
-# in the LCFRS component of the hybrid grammar
 class DCP_string(DCP_rhs_object):
+    """
+    A terminal of DCP_rule that is not linked to some terminal
+    in the LCFRS component of the hybrid grammar
+    """
+
     def __init__(self, string, edge_label=None):
         self.__string = string
         self.__edge_label = edge_label
@@ -157,9 +172,8 @@ class DCP_string(DCP_rhs_object):
     def visitMe(self, visitor, id=None):
         return visitor.visit_string(self, id)
 
-        # String representation.
-        # return: string
-
+    # String representation.
+    # return: string
     def get_string(self):
         return self.__string
 
@@ -171,9 +185,12 @@ class DCP_string(DCP_rhs_object):
         return self.__string + s
 
 
-# An index replaced by an input position, according to parsing of a string with
-# the left (LCFRS) component of hybrid grammar.
 class DCP_position:
+    """
+    An index replaced by an input position, according to parsing of a string with
+    the left (LCFRS) component of hybrid grammar.
+    """
+
     # Constructor.
     # pos: int
     # edge_label: string
@@ -199,10 +216,13 @@ class DCP_position:
         return '[' + str(self.position()) + s + ']'
 
 
-# A terminal occurrence (may linked to LCFRS terminal),
-# consisting of a DCP_string or DCP_index and a list of child terminal
-# occurrences.
 class DCP_term(DCP_rhs_object):
+    """
+    A terminal occurrence (may linked to LCFRS terminal),
+    consisting of a DCP_string or DCP_index and a list of child terminal
+    occurrences.
+    """
+
     # Constructor.
     # head: DCP_rhs_object (DCP_string / DCP_index)
     # arg: list of DCP_term/DCP_index TODO: outdated
@@ -232,8 +252,11 @@ class DCP_term(DCP_rhs_object):
         return visitor.visit_term(self, id)
 
 
-# Rule defining argument value by term.
 class DCP_rule:
+    """
+    Rule defining argument value by term.
+    """
+
     def __init__(self, lhs, rhs):
         """
         :type lhs: DCP_var
@@ -283,3 +306,7 @@ def dcp_rules_to_str(l):
 # return: string
 def dcp_rules_to_key(l):
     return ';'.join([str(r) for r in l])
+
+
+__all__ = ['DCP_visitor', 'DCP_rule', 'dcp_rules_to_key', 'dcp_rules_to_str', 'DCP_term', 'DCP_position', 'DCP_string',
+           'DCP_index', 'DCP_var']

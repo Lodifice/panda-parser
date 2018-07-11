@@ -27,7 +27,7 @@ class TraceManagerTest(unittest.TestCase):
     def test_something(self):
         grammar, r1, r2 = self.build_grammar()
         nont_map = Enumerator()
-        grammarInfo = PyGrammarInfo(grammar, nont_map)
+        grammar_info = PyGrammarInfo(grammar, nont_map)
 
         def w(x):
             return "S", x
@@ -49,9 +49,9 @@ class TraceManagerTest(unittest.TestCase):
         traces = PyDerivationManager(grammar, nont_map)
         traces.convert_rtgs_to_hypergraphs([rtg, rtg2, rtg3])
 
-        self.assertTrue(traces.is_consistent_with_grammar(grammarInfo, traceId=0))
-        self.assertFalse(traces.is_consistent_with_grammar(grammarInfo, traceId=1))
-        self.assertFalse(traces.is_consistent_with_grammar(grammarInfo, traceId=2))
+        self.assertTrue(traces.is_consistent_with_grammar(grammar_info, traceId=0))
+        self.assertFalse(traces.is_consistent_with_grammar(grammar_info, traceId=1))
+        self.assertFalse(traces.is_consistent_with_grammar(grammar_info, traceId=2))
 
 
 if __name__ == '__main__':

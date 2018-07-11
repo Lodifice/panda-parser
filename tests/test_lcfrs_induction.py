@@ -1,16 +1,15 @@
 import unittest
-from corpora.negra_parse import sentence_names_to_hybridtrees
+from copy import deepcopy
+
 from constituent.induction import direct_extract_lcfrs_from_prebinarized_corpus
+from corpora.negra_parse import sentence_names_to_hybridtrees
 from grammar.induction.terminal_labeling import FormTerminals, PosTerminals, CompositionalTerminalLabeling, \
     FrequencyBiasedTerminalLabeling
-from parser.naive.parsing import LCFRS_parser
 from hybridtree.constituent_tree import HybridTree
 from hybridtree.monadic_tokens import construct_constituent_token
-from copy import deepcopy
-from parser.sDCP_parser.sdcp_parser_wrapper import PysDCPParser, LCFRS_sDCP_Parser
-from parser.sDCPevaluation.evaluator import DCP_evaluator, dcp_to_hybridtree
 from parser.discodop_parser.parser import DiscodopKbestParser
-
+from parser.sDCP_parser.sdcp_parser_wrapper import LCFRS_sDCP_Parser
+from parser.sDCPevaluation.evaluator import DCP_evaluator, dcp_to_hybridtree
 
 fine_terminal_labeling = CompositionalTerminalLabeling(FormTerminals(), PosTerminals())
 fallback_terminal_labeling = PosTerminals()
@@ -29,7 +28,7 @@ class TestDiscodopLCFRSInduction(unittest.TestCase):
         limit = 55000
         # limit = 30
         corpus_bin = sentence_names_to_hybridtrees({str(x) for x in range(limit)}, binarized_corpus,
-                                               disconnect_punctuation=False, add_vroot=True, mode="DISCO-DOP")
+                                                   disconnect_punctuation=False, add_vroot=True, mode="DISCO-DOP")
 
         corpus = sentence_names_to_hybridtrees({str(x) for x in range(limit)}, normal_corpus,
                                                disconnect_punctuation=False, add_vroot=True, mode="DISCO-DOP")
@@ -99,4 +98,3 @@ class TestDiscodopLCFRSInduction(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

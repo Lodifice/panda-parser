@@ -25,7 +25,7 @@ def linearize(grammar, nonterminal_labeling, terminal_labeling, file, delimiter=
 
     terminals = Enumerator(first_index=1)
     if nonterminal_encoder is None:
-        nonterminals = Enumerator(file)
+        nonterminals = Enumerator()
     else:
         nonterminals = nonterminal_encoder
     num_inherited_args = {}
