@@ -173,29 +173,6 @@ def sentence_names_to_hybridtrees(names,
     return trees
 
 
-def topological_order(dag):
-    """
-    :type dag: HybridDag
-    :return: list of nodes of dag in topological order
-    :rtype: list
-    """
-    order = []
-    added = set()
-    changed = True
-    while changed:
-        changed = False
-        for node in dag.nodes():
-            if node in added:
-                continue
-            if all([c in added for c in dag.children(node) + dag.sec_children(node)]):
-                added.add(node)
-                order.append(node)
-                changed = True
-    assert len(added) == len(dag.nodes())
-    # print("Order", order)
-    return order
-
-
 def generate_ids_for_inner_nodes_dag(dag, order, idNum):
     counter = 500
     for node in order:
@@ -306,8 +283,10 @@ def serialize_hybridtrees_to_negra(trees, counter, length, use_sentence_names=Fa
         if len(tree.full_yield()) <= length:
             idNum = {}
             if isinstance(tree, HybridDag):
-                generate_ids_for_inner_nodes_dag(tree, topological_order(tree), idNum)
-                print(idNum)
+                top_order = tree.topological_order()
+                assert top_order is not None
+                generate_ids_for_inner_nodes_dag(tree, top_order, idNum)
+                # print(idNum)
             else:
                 for root in tree.root:
                     generate_ids_for_inner_nodes(tree, root, idNum)

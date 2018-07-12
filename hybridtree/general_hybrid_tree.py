@@ -529,5 +529,31 @@ class HybridDag(HybridTree):
     def sec_parents(self, node):
         return self._sec_parents.get(node, [])
 
+    def topological_order(self, reverse=False):
+        """
+        :param reverse: reverse list
+        :type reverse: bool
+        :return: list of nodes of dag in topological order starting from leaves
+        :rtype: list
+        """
+        order = []
+        added = set()
+        changed = True
+        while changed:
+            changed = False
+            for node in self.nodes():
+                if node in added:
+                    continue
+                if all([c in added for c in self.children(node) + self.sec_children(node)]):
+                    added.add(node)
+                    order.append(node)
+                    changed = True
+        if len(added) == len(self.nodes()):
+            if reverse:
+                return reversed(order)
+            return order
+        else:
+            return None
+
 
 __all__ = ["HybridTree"]
