@@ -55,6 +55,7 @@ cdef class PyDerivationManager(PyTraceManager):
         cdef shared_ptr[Hypergraph[NONTERMINAL, size_t]] hg
         cdef vector[Element[Node[NONTERMINAL]]] sources
         cdef PyElement pyElement
+        cdef size_t eLabel
 
         for derivation in corpus:
             assert(isinstance(derivation, AbstractDerivation))
@@ -105,11 +106,13 @@ cdef class PyDerivationManager(PyTraceManager):
         cdef shared_ptr[Hypergraph[NONTERMINAL, size_t]] hg
         cdef vector[Element[Node[NONTERMINAL]]] sources
         cdef PyElement pyElement
+        cdef size_t eLabel
 
         hg = make_shared[Hypergraph[NONTERMINAL, size_t]](self.node_labels, self.edge_labels)
         nodeMap = {}
         edgeSet = set()
         root_key = None
+
 
         for derivation in corpus:
             assert(isinstance(derivation, AbstractDerivation))
@@ -171,6 +174,7 @@ cdef class PyDerivationManager(PyTraceManager):
         cdef shared_ptr[Hypergraph[NONTERMINAL, size_t]] hg
         cdef vector[Element[Node[NONTERMINAL]]] sources
         cdef PyElement pyElement
+        cdef size_t eLabel
 
         for rtg in rtgs:
             assert(isinstance(rtg, RTG))
@@ -216,7 +220,7 @@ cdef class PyDerivationManager(PyTraceManager):
         cdef int node_intermediate
         cdef int node_prim
         cdef int node
-        cdef int eLabel
+        cdef size_t eLabel
         cdef set intermediate_nodes
         cdef int edge_num, edge_num_prim
 

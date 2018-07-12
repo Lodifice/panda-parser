@@ -2,24 +2,23 @@
 Provides classes for latent annotations, EMTraining, and Split/Merge-Training
 """
 
+import itertools
+import random
+import time
+
+from cython.operator cimport dereference as deref
+from libcpp cimport bool as c_bool
+from libcpp.functional cimport function
 from libcpp.map cimport map
 from libcpp.memory cimport make_shared
-from cython.operator cimport dereference as deref
-from libcpp.functional cimport function
-from libcpp cimport bool as c_bool
 from libcpp.string cimport string
-from parser.commons.commons cimport NONTERMINAL, TERMINAL, unsigned_int
-from parser.commons.commons cimport output_helper_utf8 as output_helper
-from parser.trace_manager.trace_manager cimport PyTraceManager, TraceManagerPtr
-from parser.trace_manager.sm_trainer_util cimport PyGrammarInfo, GrammarInfo2, PyStorageManager
-from parser.trace_manager.score_validator cimport PyCandidateScoreValidator, CandidateScoreValidator
-import time
-import random
-import grammar.lcfrs as gl
+
 import grammar.rtg as gr
-import itertools
-from util.enumerator import Enumerator
-from collections import defaultdict
+from parser.commons.commons cimport NONTERMINAL, unsigned_int
+from parser.commons.commons cimport output_helper_utf8 as output_helper
+from parser.trace_manager.score_validator cimport PyCandidateScoreValidator, CandidateScoreValidator
+from parser.trace_manager.sm_trainer_util cimport PyGrammarInfo, GrammarInfo2, PyStorageManager
+from parser.trace_manager.trace_manager cimport PyTraceManager, TraceManagerPtr
 
 DEF ENCODE_NONTERMINALS = True
 DEF ENCODE_TERMINALS = True
@@ -105,17 +104,17 @@ cdef extern from "Trainer/TrainerBuilder.h" namespace "Trainer":
 cdef extern from "Trainer/AnnotationProjection.h" namespace "Trainer":
     cdef const double IO_PRECISION_DEFAULT
     cdef const double IO_CYCLE_LIMIT_DEFAULT
-    cdef LatentAnnotation project_annotation[Nonterminal](const LatentAnnotation & annotation,
-                                                          const GrammarInfo2 & grammarInfo,
-                                                          const double ioPrecision,
-                                                          const size_t ioCycleLimit,
-                                                          const c_bool debug)
-    cdef LatentAnnotation project_annotation_by_merging[Nonterminal](const LatentAnnotation & annotation,
-                                                                     const GrammarInfo2 & grammarInfo,
-                                                                     const vector[vector[vector[size_t]]] & merge_sources,
-                                                                     double ioPrecision,
-                                                                     double ioCycleLimit,
-                                                                     const bint debug)
+    cdef LatentAnnotation project_annotation(const LatentAnnotation & annotation,
+                                             const GrammarInfo2 & grammarInfo,
+                                             const double ioPrecision,
+                                             const size_t ioCycleLimit,
+                                             const c_bool debug)
+    cdef LatentAnnotation project_annotation_by_merging(const LatentAnnotation & annotation,
+                                                        const GrammarInfo2 & grammarInfo,
+                                                        const vector[vector[vector[size_t]]] & merge_sources,
+                                                        double ioPrecision,
+                                                        double ioCycleLimit,
+                                                        const bint debug)
 
 cdef extern from "Trainer/GeneticCrosser.h" namespace "Trainer":
     cdef LatentAnnotation mix_annotations[Nonterminal](const LatentAnnotation& la1
@@ -374,11 +373,11 @@ cdef class PyLatentAnnotation:
                     output_helper(str(nont) + " " + str(split_total_probs))
                     raise Exception(nont, split_total_probs)
 
-            la_proj = make_shared[LatentAnnotation](project_annotation[NONTERMINAL](deref(self.latentAnnotation),
-                                                                                    deref(grammarInfo.grammarInfo),
-                                                                                    IO_PRECISION_DEFAULT,
-                                                                                    IO_CYCLE_LIMIT_DEFAULT,
-                                                                                    debug))
+            la_proj = make_shared[LatentAnnotation](project_annotation(deref(self.latentAnnotation),
+                                                                       deref(grammarInfo.grammarInfo),
+                                                                       IO_PRECISION_DEFAULT,
+                                                                       IO_CYCLE_LIMIT_DEFAULT,
+                                                                       debug))
 
             # guarantee properness:
             for nont in range(deref(grammarInfo.grammarInfo).normalizationGroups.size()):
@@ -445,12 +444,12 @@ cdef class PyLatentAnnotation:
                                       vector[vector[vector[size_t]]] merge_sources,
                                       c_bool debug=False):
         cdef shared_ptr[LatentAnnotation] la_projected\
-            = make_shared[LatentAnnotation](project_annotation_by_merging[NONTERMINAL](deref(self.latentAnnotation),
-                                                                                       deref(grammarInfo.grammarInfo),
-                                                                                       merge_sources,
-                                                                                       IO_PRECISION_DEFAULT,
-                                                                                       IO_CYCLE_LIMIT_DEFAULT,
-                                                                                       debug))
+            = make_shared[LatentAnnotation](project_annotation_by_merging(deref(self.latentAnnotation),
+                                                                          deref(grammarInfo.grammarInfo),
+                                                                          merge_sources,
+                                                                          IO_PRECISION_DEFAULT,
+                                                                          IO_CYCLE_LIMIT_DEFAULT,
+                                                                          debug))
         cdef PyLatentAnnotation pyLaProjected = PyLatentAnnotation()
         pyLaProjected.latentAnnotation = la_projected
         cdef vector[double] split_total_probs

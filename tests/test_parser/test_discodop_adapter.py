@@ -228,7 +228,7 @@ class DiscodopAdapterTest(unittest.TestCase):
         # print(lazykbest(chart, 5))
 
         manager = PyDerivationManager(grammar)
-        manager.convert_chart_to_hypergraph(chart, disco_grammar, debug=True)
+        manager.convert_chart_to_hypergraph(chart, disco_grammar, debug=False)
 
         file = tempfile.mktemp()
         print(file)
