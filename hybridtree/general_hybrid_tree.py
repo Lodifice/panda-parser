@@ -2,6 +2,7 @@
 __author__ = 'kilian'
 
 from collections import defaultdict
+
 from grammar.induction.decomposition import join_spans
 from hybridtree.monadic_tokens import MonadicToken
 
@@ -528,6 +529,25 @@ class HybridDag(HybridTree):
 
     def sec_parents(self, node):
         return self._sec_parents.get(node, [])
+
+    #TODO remove this code duplication, specialization concerning constituent case(code duplication ConstituentTree!)
+    def labelled_spans(self):
+        """
+        :return: list of spans (each of which is string plus an even number of (integer) positions)
+        Labelled spans.
+        """
+        spans = []
+        for id in [n for n in self.nodes() if n not in self.full_yield()]:
+            span = [self.node_token(id).category()]
+            for (low, high) in join_spans(self.fringe(id)):
+                span += [low, high]
+            # TODO: this if-clause allows to handle trees, that have nodes with empty fringe
+            if len(span) >= 3:
+                spans += [span]
+        return sorted(spans,
+                      # cmp=lambda x, y: cmp([x[1]] + [-x[2]] + x[3:] + [x[0]], \
+                      #                      [y[1]] + [-y[2]] + y[3:] + [y[0]])
+                      key=lambda x: [tuple(x[1:]), x[0]])
 
     def topological_order(self, reverse=False):
         """
