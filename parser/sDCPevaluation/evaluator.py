@@ -182,22 +182,25 @@ def dcp_to_hybriddag(tree, dcp, tokens, ignore_punctuation, construct_token, reo
 # tree: GeneralHybridTree
 # next_id: string
 # return: pair of string
-def dcp_to_hybriddag_recur(dcp, tree, next_idx, construct_token, cache, parent):
+def dcp_to_hybriddag_recur(dcp, dag, next_idx, construct_token, cache, parent):
     head = dcp.head()
     if isinstance(head, DCP_position):
         # FIXME : inconsistent counting of positions in hybrid tree requires -1
         idx = str(head.position() - 1)
     elif isinstance(head, DCP_string):
         if head.get_string() == 'SECEDGE':
-            assert len(dcp.arg()) == 1
-            if isinstance(dcp.arg()[0].head(), DCP_position):
-                self_idx = str(dcp.arg()[0].head().position() - 1)
-            elif dcp.arg()[0] in cache:
-                self_idx = cache[dcp.arg()[0]]
-            else:
-                cache[dcp.arg()[0]] = self_idx = str(next_idx)
-                next_idx += 1
-            tree.add_sec_child(parent, self_idx, head.edge_label())
+            if len(dcp.arg()) != 1:
+                print('WARNING: sec edge with', len(dcp.arg()), 'children', '(%s)' % dag.sent_label())
+            # assert len(dcp.arg()) == 1
+            for arg in dcp.arg():
+                if isinstance(arg.head(), DCP_position):
+                    self_idx = str(arg.head().position() - 1)
+                elif arg in cache:
+                    self_idx = cache[arg]
+                else:
+                    cache[arg] = self_idx = str(next_idx)
+                    next_idx += 1
+                dag.add_sec_child(parent, self_idx, head.edge_label())
             return None, next_idx
         else:
             label = head
@@ -206,17 +209,17 @@ def dcp_to_hybriddag_recur(dcp, tree, next_idx, construct_token, cache, parent):
             else:
                 cache[dcp] = idx = str(next_idx)
                 next_idx += 1
-            tree.add_node(idx, construct_token(label, None, False))
+            dag.add_node(idx, construct_token(label, None, False))
             # tree.set_label(idx, label)
     else:
         raise Exception
     if head.edge_label() is not None:
-        tree.node_token(idx).set_edge_label(head.edge_label())
+        dag.node_token(idx).set_edge_label(head.edge_label())
     for child in dcp.arg():
         tree_child, next_idx = \
-            dcp_to_hybriddag_recur(child, tree, next_idx, construct_token, cache, idx)
+            dcp_to_hybriddag_recur(child, dag, next_idx, construct_token, cache, idx)
         if tree_child is not None:
-            tree.add_child(idx, tree_child)
+            dag.add_child(idx, tree_child)
     return idx, next_idx
 
 
