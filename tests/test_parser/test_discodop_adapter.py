@@ -1,22 +1,24 @@
 from __future__ import print_function, unicode_literals
+
+import re
+import tempfile
 import unittest
-from grammar.lcfrs import LCFRS, LCFRS_var, LCFRS_lhs
+from math import exp
 from pprint import pprint
+
+from discodop.coarsetofine import prunechart
+from discodop.containers import Grammar
+from discodop.estimates import getestimates
+from discodop.plcfrs import parse
+
+from grammar.lcfrs import LCFRS, LCFRS_var, LCFRS_lhs
+from parser.coarse_to_fine_parser.trace_weight_projection import py_edge_weight_projection
 from parser.discodop_parser.grammar_adapter import transform_grammar, transform_grammar_cfg_approx
 from parser.discodop_parser.parser import DiscodopKbestParser
-from discodop.plcfrs import parse
-from discodop.containers import Grammar
-from discodop.kbest import lazykbest
-from discodop.estimates import getestimates
-from discodop.coarsetofine import prunechart
 from parser.supervised_trainer.trainer import PyDerivationManager
-import tempfile
-from parser.coarse_to_fine_parser.trace_weight_projection import py_edge_weight_projection
 from parser.trace_manager.sm_trainer import build_PyLatentAnnotation_initial, build_PyLatentAnnotation
 from parser.trace_manager.sm_trainer_util import PyGrammarInfo, PyStorageManager
 from util.enumerator import Enumerator
-from math import log, exp
-import re
 
 
 class DiscodopAdapterTest(unittest.TestCase):
@@ -90,7 +92,7 @@ class DiscodopAdapterTest(unittest.TestCase):
             # rule 4
             lhs = LCFRS_lhs(nont)
             lhs.add_arg([LCFRS_var(0, 0), LCFRS_var(1, 0)])
-            lhs.add_arg([LCFRS_var(0,1)])
+            lhs.add_arg([LCFRS_var(0, 1)])
             grammar.add_rule(lhs, [nont_, c1])
 
             # rule 5
@@ -117,7 +119,7 @@ class DiscodopAdapterTest(unittest.TestCase):
 
         # rule 2
         lhs = LCFRS_lhs("B")
-        lhs.add_arg([LCFRS_var(0,0), LCFRS_var(1, 0)])
+        lhs.add_arg([LCFRS_var(0, 0), LCFRS_var(1, 0)])
         grammar.add_rule(lhs, ["B", "B"])
 
         grammar.make_proper()
@@ -221,7 +223,9 @@ class DiscodopAdapterTest(unittest.TestCase):
                 for edge_num in range(chart.numedges(i)):
                     edge = chart.getEdgeForItem(i, edge_num)
                     if isinstance(edge, tuple):
-                        print("\t", disco_grammar.nonterminalstr(chart.label(i)) + "[" + str(i) + "]", "->", ' '.join([disco_grammar.nonterminalstr(chart.label(j)) + "[" + str(j) + "]" for j in [edge[1], edge[2]] if j != 0]))
+                        print("\t", disco_grammar.nonterminalstr(chart.label(i)) + "[" + str(i) + "]", "->", ' '.join(
+                            [disco_grammar.nonterminalstr(chart.label(j)) + "[" + str(j) + "]" for j in
+                             [edge[1], edge[2]] if j != 0]))
                     else:
                         print("\t", disco_grammar.nonterminalstr(chart.label(i)) + "[" + str(i) + "]", "->", inp[edge])
         print(chart.getEdgeForItem(root, 0))

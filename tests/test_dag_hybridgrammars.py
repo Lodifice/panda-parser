@@ -40,7 +40,8 @@ class DagHybridGrammarTest(unittest.TestCase):
                 print(''.join(lines), file=pf)
 
         _, binarized_file = tempfile.mkstemp(suffix='.export')
-        subprocess.call(["discodop", "treetransforms", "--binarize", "-v", "1", "-h", "1", primary_file, binarized_file])
+        subprocess.call(["discodop", "treetransforms", "--binarize", "-v", "1", "-h", "1",
+                         primary_file, binarized_file])
 
         print(primary_file)
         print(binarized_file)

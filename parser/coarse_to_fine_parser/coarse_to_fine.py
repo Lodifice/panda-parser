@@ -86,8 +86,21 @@ class Coarse_to_fine_parser(AbstractParser):
     def recognized(self):
         return self.base_parser.recognized()
 
-    def __init__(self, grammar, la, grammarInfo, nontMap, base_parser_type=None, base_parser=None, input=None, save_preprocessing=None,
-                 load_preprocessing=None, k=50, heuristics=-1.0, mode="k-best", sum_op=False, variational=False):
+    def __init__(self,
+                 grammar,
+                 la,
+                 grammarInfo,
+                 nontMap,
+                 base_parser_type=None,
+                 base_parser=None,
+                 input=None,
+                 save_preprocessing=None,
+                 load_preprocessing=None,
+                 k=50,
+                 heuristics=-1.0,
+                 mode="k-best",
+                 sum_op=False,
+                 variational=False):
         self.grammar = grammar
         if base_parser is not None:
             self.base_parser = base_parser

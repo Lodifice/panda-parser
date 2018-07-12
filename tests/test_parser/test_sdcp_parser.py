@@ -1,32 +1,31 @@
 from __future__ import print_function
+
 import unittest
 from sys import stderr
 
-from grammar.lcfrs import LCFRS
-from grammar.induction.decomposition import fanout_limited_partitioning
+from constituent.induction import fringe_extract_lcfrs, direct_extract_lcfrs
 from corpora.conll_parse import parse_conll_corpus
 from dependency.induction import induce_grammar
+from dependency.labeling import the_labeling_factory
+from grammar.induction.decomposition import fanout_limited_partitioning
 from grammar.induction.recursive_partitioning import cfg
 from grammar.induction.terminal_labeling import the_terminal_labeling_factory, PosTerminals, FormPosTerminalsUnk
-from constituent.induction import fringe_extract_lcfrs, direct_extract_lcfrs
-from dependency.labeling import the_labeling_factory
+from grammar.lcfrs import LCFRS
+from hybridtree.constituent_tree import ConstituentTree
 from hybridtree.general_hybrid_tree import HybridTree
-from hybridtree.constituent_tree import HybridTree as ConstituentTree
 from hybridtree.monadic_tokens import construct_conll_token, construct_constituent_token
+from parser.sDCP_parser.playground import split_merge_training
 from parser.sDCP_parser.sdcp_parser_wrapper import PysDCPParser, LCFRS_sDCP_Parser, SDCPDerivation
 from parser.sDCP_parser.sdcp_trace_manager import compute_reducts, PySDCPTraceManager
-from parser.sDCP_parser.playground import split_merge_training
 from parser.sDCPevaluation.evaluator import dcp_to_hybridtree, DCP_evaluator
 from parser.trace_manager.sm_trainer import PyEMTrainer
 from tests.test_induction import hybrid_tree_1, hybrid_tree_2
-from hybridtree.constituent_tree import ConstituentTree
 
 
 class sDCPParserTest(unittest.TestCase):
     def test_basic_sdcp_parsing_dependency(self):
         tree1 = hybrid_tree_1()
         tree2 = hybrid_tree_2()
-
 
         terminal_labeling = the_terminal_labeling_factory().get_strategy('pos')
 
@@ -65,7 +64,6 @@ class sDCPParserTest(unittest.TestCase):
         tree1 = constituent_tree_1()
         tree2 = constituent_tree_2()
 
-
         terminal_labeling = FormPosTerminalsUnk([tree1, tree2], 1, filter=["VP"])
         fanout = 1
 
@@ -98,7 +96,8 @@ class sDCPParserTest(unittest.TestCase):
             print(der)
             output_tree = ConstituentTree(tree1.sent_label())
             tokens = tree1.token_yield()
-            dcp_to_hybridtree(output_tree, DCP_evaluator(der).getEvaluation(), tokens, False, construct_constituent_token)
+            dcp_to_hybridtree(output_tree, DCP_evaluator(der).getEvaluation(), tokens, False,
+                              construct_constituent_token)
             print(tree1)
             print(output_tree)
 
@@ -161,7 +160,6 @@ class sDCPParserTest(unittest.TestCase):
         # for rule in grammar.rules():
         #     print >>stderr, rule
 
-
     def test_corpus_sdcp_parsing(self):
         # parser_type = PysDCPParser
         print("testing (plain) sDCP parser", file=stderr)
@@ -178,7 +176,8 @@ class sDCPParserTest(unittest.TestCase):
                 if j in n:
                     yield tree
                 j += 1
-        #params
+
+        # params
         train = 'res/dependency_conll/german/tiger/train/german_tiger_train.conll'
         test = train
         # test = 'res/dependency_conll/german/tiger/test/german_tiger_test.conll'
@@ -189,7 +188,7 @@ class sDCPParserTest(unittest.TestCase):
         recursive_partitioning = [cfg]
 
         (n_trees, grammar_prim) = induce_grammar(trees, primary_labelling, term_labelling.token_label,
-                                                     recursive_partitioning, start)
+                                                 recursive_partitioning, start)
 
         parser_type.preprocess_grammar(grammar_prim, term_labelling)
 
@@ -225,7 +224,8 @@ class sDCPParserTest(unittest.TestCase):
                 # print >>stderr, the_yield
                 tokens2 = list(map(lambda pos: construct_conll_token('_', pos), the_yield))
 
-                dcp_to_hybridtree(output_tree, DCP_evaluator(der).getEvaluation(), tokens2, False, construct_conll_token, reorder=False)
+                dcp_to_hybridtree(output_tree, DCP_evaluator(der).getEvaluation(), tokens2, False,
+                                  construct_conll_token, reorder=False)
                 print(tree, file=stderr)
                 print(output_tree, file=stderr)
 
@@ -243,7 +243,6 @@ class sDCPParserTest(unittest.TestCase):
             print(key, count_derivs[key])
 
         print("# trees with no complete match:", no_complete_match)
-
 
     def compare_hybrid_trees(self, tree1, tree2, compare_order=False):
         self.assertTrue(isinstance(tree1, HybridTree))
@@ -293,7 +292,8 @@ class sDCPParserTest(unittest.TestCase):
         if not len(der1.child_ids(id1)) == len(der2.child_ids(id2)):
             return False
         for i in range(len(der1.child_ids(id1))):
-            if not sDCPParserTest.compare_derivation_recursive(der1, der1.child_id(id1, i), der2, der2.child_id(id2, i)):
+            if not sDCPParserTest.compare_derivation_recursive(der1, der1.child_id(id1, i), der2,
+                                                               der2.child_id(id2, i)):
                 return False
         return True
 
@@ -343,7 +343,8 @@ class sDCPParserTest(unittest.TestCase):
 
         print("call S/M Training", file=stderr)
 
-        new_grammars = split_merge_training(grammar, terminal_labeling, [tree, tree2], 3, 5, merge_threshold=0.5, debug=False)
+        new_grammars = split_merge_training(grammar, terminal_labeling, [tree, tree2], 3, 5, merge_threshold=0.5,
+                                            debug=False)
 
         for new_grammar in new_grammars:
             for i, rule in enumerate(new_grammar.rules()):
@@ -372,7 +373,8 @@ class sDCPParserTest(unittest.TestCase):
         trees = parse_conll_corpus(train, False, limit_train)
         print("call S/M Training", file=stderr)
 
-        new_grammars = split_merge_training(grammar_prim, term_labelling, trees, 4, 10, tie_breaking=True, init="equal", sigma=0.05, seed=50, merge_threshold=0.1)
+        new_grammars = split_merge_training(grammar_prim, term_labelling, trees, 4, 10, tie_breaking=True, init="equal",
+                                            sigma=0.05, seed=50, merge_threshold=0.1)
 
         print("finished S/M Training", file=stderr)
 
@@ -484,7 +486,6 @@ def constituent_tree_2():
     tree.add_to_root("S")
 
     return tree
-
 
 
 if __name__ == '__main__':

@@ -1,27 +1,27 @@
 from __future__ import print_function
-import unittest
 
+import copy
+import unittest
+from sys import stderr
+
+from corpora.conll_parse import parse_conll_corpus, tree_to_conll_str
 from dependency.induction import induce_grammar
+from dependency.labeling import the_labeling_factory
+from dependency.minimum_risk import compute_minimum_risk_tree
+from dependency.oracle import compute_oracle_tree
 from grammar.induction.recursive_partitioning import direct_extraction, cfg
 from grammar.induction.terminal_labeling import the_terminal_labeling_factory
-from dependency.labeling import the_labeling_factory
+from grammar.lcfrs_derivation import derivation_to_hybrid_tree
 from hybridtree.general_hybrid_tree import HybridTree
 from hybridtree.monadic_tokens import construct_conll_token
-from grammar.lcfrs_derivation import derivation_to_hybrid_tree
+from parser.coarse_to_fine_parser.coarse_to_fine import Coarse_to_fine_parser
 from parser.gf_parser.gf_export import *
 from parser.gf_parser.gf_interface import GFParser, GFParser_k_best
 from parser.sDCPevaluation.evaluator import DCP_evaluator, dcp_to_hybridtree
-from tests.test_induction import hybrid_tree_1, hybrid_tree_2
-from corpora.conll_parse import parse_conll_corpus, tree_to_conll_str
-from sys import stderr
-from math import exp
-import copy
-from dependency.minimum_risk import compute_minimum_risk_tree
-from dependency.oracle import compute_oracle_tree
-from util.enumerator import Enumerator
-from parser.trace_manager.sm_trainer_util import PyGrammarInfo, PyStorageManager
 from parser.trace_manager.sm_trainer import build_PyLatentAnnotation_initial
-from parser.coarse_to_fine_parser.coarse_to_fine import Coarse_to_fine_parser
+from parser.trace_manager.sm_trainer_util import PyGrammarInfo, PyStorageManager
+from tests.test_induction import hybrid_tree_1, hybrid_tree_2
+from util.enumerator import Enumerator
 
 
 class GrammaticalFrameworkTest(unittest.TestCase):
@@ -31,9 +31,9 @@ class GrammaticalFrameworkTest(unittest.TestCase):
         terminal_labeling = the_terminal_labeling_factory().get_strategy('pos')
 
         _, grammar = induce_grammar([tree, tree2],
-                                      the_labeling_factory().create_simple_labeling_strategy('empty','pos'),
-                                      # the_labeling_factory().create_simple_labeling_strategy('child', 'pos+deprel'),
-                                      terminal_labeling.token_label, [direct_extraction], 'START')
+                                    the_labeling_factory().create_simple_labeling_strategy('empty', 'pos'),
+                                    # the_labeling_factory().create_simple_labeling_strategy('child', 'pos+deprel'),
+                                    terminal_labeling.token_label, [direct_extraction], 'START')
         print(max([grammar.fanout(nont) for nont in grammar.nonts()]))
         print(grammar)
 
@@ -176,7 +176,6 @@ class GrammaticalFrameworkTest(unittest.TestCase):
             weights = []
             derivation_list = []
             for weight, der in derivations:
-
                 self.assertTrue(not der in derivation_list)
 
                 derivation_list.append(der)
@@ -219,7 +218,6 @@ class GrammaticalFrameworkTest(unittest.TestCase):
         for i, tree in enumerate(trees):
             print("Parsing sentence ", i, file=stderr)
 
-
             parser = parser_type(grammar_prim, tree_yield(tree.token_yield()), k=50)
 
             self.assertTrue(parser.recognized())
@@ -231,11 +229,9 @@ class GrammaticalFrameworkTest(unittest.TestCase):
             weights = []
             derivation_list = []
             for weight, der in derivations:
-
                 self.assertTrue(not der in derivation_list)
 
                 derivation_list.append(der)
-
 
                 dcp = DCP_evaluator(der).getEvaluation()
                 h_tree = HybridTree()
@@ -282,7 +278,9 @@ class GrammaticalFrameworkTest(unittest.TestCase):
             viterbi_weight = parser.viterbi_weight()
             viterbi_deriv = parser.viterbi_derivation()
 
-            der_to_tree = lambda der: dcp_to_hybridtree(HybridTree(), DCP_evaluator(der).getEvaluation(), copy.deepcopy(tree.full_token_yield()), False, construct_conll_token)
+            der_to_tree = lambda der: dcp_to_hybridtree(HybridTree(), DCP_evaluator(der).getEvaluation(),
+                                                        copy.deepcopy(tree.full_token_yield()), False,
+                                                        construct_conll_token)
 
             viterbi_tree = der_to_tree(viterbi_deriv)
 
@@ -292,7 +290,7 @@ class GrammaticalFrameworkTest(unittest.TestCase):
 
             for i, (parsed_tree, _, _) in enumerate(ordered_parse_trees):
                 if parsed_tree.__eq__(tree):
-                    print("Gold tree is ", i+1, " in best tree list", file=stderr)
+                    print("Gold tree is ", i + 1, " in best tree list", file=stderr)
                     break
 
             if (not viterbi_tree.__eq__(best_tree) and viterbi_weight != best_weight):
