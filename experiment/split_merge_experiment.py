@@ -378,7 +378,9 @@ class SplitMergeExperiment(Experiment):
         last_la = self.organizer.latent_annotations[self.organizer.last_sm_cycle]
 
         if True:
-            last_la.project_weights(self.base_grammar, self.organizer.grammarInfo)
+            print("last la alignment consistent", last_la.check_rule_split_alignment())
+            assert last_la.check_rule_split_alignment()
+            last_la.project_weights(self.base_grammar, self.organizer.grammarInfo, debug=False)
         else:
             splits, _, _ = last_la.serialize()
             merge_sources = [[[split for split in range(0, splits[nont_idx])]]
