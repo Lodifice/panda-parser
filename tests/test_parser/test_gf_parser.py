@@ -8,6 +8,7 @@ from dependency.labeling import the_labeling_factory
 from hybridtree.general_hybrid_tree import HybridTree
 from hybridtree.monadic_tokens import construct_conll_token
 from grammar.lcfrs_derivation import derivation_to_hybrid_tree
+from grammar.lcfrs import LCFRS, LCFRS_var, LCFRS_lhs
 from parser.gf_parser.gf_export import *
 from parser.gf_parser.gf_interface import GFParser, GFParser_k_best
 from parser.sDCPevaluation.evaluator import DCP_evaluator, dcp_to_hybridtree
@@ -309,7 +310,35 @@ class GrammaticalFrameworkTest(unittest.TestCase):
                     print(tree_to_conll_str(tree), file=stderr)
 
     def test_projection_based_parser_k_best_hack(self):
-        grammar = self.build_grammar()
+        grammar = LCFRS("S")
+
+        # rule 0
+        lhs = LCFRS_lhs("B")
+        lhs.add_arg(["a"])
+        grammar.add_rule(lhs, [], 0.25)
+
+        # rule 1
+        lhs = LCFRS_lhs("A")
+        lhs.add_arg(["a"])
+        grammar.add_rule(lhs, [], 0.5)
+
+        # rule 2
+        lhs = LCFRS_lhs("S")
+        lhs.add_arg([LCFRS_var(0, 0)])
+        grammar.add_rule(lhs, ["B"], 1.0)
+
+        # rule 3
+        lhs = LCFRS_lhs("A")
+        lhs.add_arg([LCFRS_var(0, 0), LCFRS_var(1, 0)])
+        grammar.add_rule(lhs, ["A", "B"], 0.5)
+
+        # rule 4
+        lhs = LCFRS_lhs("B")
+        lhs.add_arg([LCFRS_var(0, 0), LCFRS_var(1, 0)])
+        grammar.add_rule(lhs, ["A", "B"], 0.75)
+
+        grammar.make_proper()
+        
         inp = ["a"] * 3
         nontMap = Enumerator()
         gi = PyGrammarInfo(grammar, nontMap)
