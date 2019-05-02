@@ -204,7 +204,7 @@ cdef class PyDerivationManager(PyTraceManager):
         intermediate_nodes = set()
 
         # create nodes
-        for node in range(1, chart.numitems() + 1):
+        for node in range(1, chart.numitems()):
             orig_nont = disco_grammar.nonterminalstr(chart.label(node))
             orig_nont = unescape_brackets(orig_nont)
             # print(orig_nont)
@@ -219,7 +219,7 @@ cdef class PyDerivationManager(PyTraceManager):
             nodeMap[node] = pyElement2
 
         # create edges
-        for node_prim in range(1, chart.numitems() + 1):
+        for node_prim in range(1, chart.numitems()):
             # skip intermediate nodes
             if node_prim in intermediate_nodes:
                 continue
