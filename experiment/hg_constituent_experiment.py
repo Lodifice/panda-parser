@@ -242,6 +242,7 @@ def terminal_labeling(corpus, threshold=DEFAULT_RARE_WORD_THRESHOLD):
 
 MULTI_OBJECTIVES = "multi-objectives"
 MULTI_OBJECTIVES_INDEPENDENT = "multi-objectives-independent"
+NO_PARSING = "no-parsing"
 BASE_GRAMMAR = "base-grammar" # use base grammar for parsing (no annotations LA)
 MAX_RULE_PRODUCT_ONLY = "max-rule-product-only"
 TEST_SECOND_HALF = False
@@ -1015,7 +1016,7 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
     merge_percentage=('percentage of splits that is merged', 'option', None, float),
     predicted_pos=('use predicted POS-tags for evaluation', 'flag'),
     parsing_mode=('parsing mode for evaluation', 'option', None, str,
-                  [MULTI_OBJECTIVES, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT]),
+                  [MULTI_OBJECTIVES, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, NO_PARSING]),
     parsing_limit=('only evaluate on sentences of length up to 40', 'flag'),
     k_best=('k in k-best reranking parsing mode', 'option', None, int),
     directory=('directory in which experiment is run (default: mktemp)', 'option', None, str),
@@ -1092,7 +1093,10 @@ def main(split,
         experiment.set_terminal_labeling(terminal_labeling(experiment.read_corpus(experiment.resources[TRAINING]),
                                                            threshold=unk_threshold))
 
-    if parsing_mode == MULTI_OBJECTIVES:
+    if parsing_mode == NO_PARSING:
+        experiment.parsing_mode = NO_PARSING
+        experiment.run_experiment()
+    elif parsing_mode == MULTI_OBJECTIVES:
         experiment.parsing_mode = "discodop-multi-method"
         experiment.resources[RESULT] = ScorerAndWriter(experiment,
                                                        directory=experiment.directory,

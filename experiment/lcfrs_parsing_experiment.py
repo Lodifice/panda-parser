@@ -15,7 +15,8 @@ from grammar.induction.terminal_labeling import PosTerminals, FrequencyBiasedTer
 from experiment.resources import TRAINING, VALIDATION, TESTING, TESTING_INPUT, RESULT, CorpusFile
 from experiment.split_merge_experiment import SplitMergeExperiment
 from experiment.hg_constituent_experiment import ConstituentExperiment, ScoringExperiment, ScorerAndWriter, \
-    setup_corpus_resources, MULTI_OBJECTIVES, MULTI_OBJECTIVES_INDEPENDENT, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY
+    setup_corpus_resources, MULTI_OBJECTIVES, MULTI_OBJECTIVES_INDEPENDENT, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, \
+    NO_PARSING
 
 TEST_SECOND_HALF = False  # parse second half of test set
 
@@ -196,8 +197,18 @@ class LCFRSExperiment(ConstituentExperiment, SplitMergeExperiment):
         SplitMergeExperiment.read_stage_file(self)
 
 
+class Positional(object):
+    def __init__(self, help='', type=None, choices=None, metavar=None):
+        self.help = help + '. One of {' + ','.join(choices) + '}'
+        self.kind = 'positional'
+        self.abbrev = None
+        self.type = type
+        self.choices = None
+        self.metavar = metavar
+
+
 @plac.annotations(
-    split=('the corpus/split to run the experiment on', 'positional', None, str, ["SPMRL", "HN08", "WSJ", "WSJ-km2003"]),
+    split=Positional('the corpus/split to run the experiment on', str, ["SPMRL", "HN08", "WSJ", "WSJ-km2003"]),
     test_mode=('evaluate on test set instead of dev. set', 'flag'),
     unk_threshold=('threshold for unking rare words', 'option', None, int),
     h_markov=('horizontal Markovization', 'option', None, int),
@@ -288,7 +299,10 @@ def main(split,
         # StanfordUNKing(experiment.read_corpus(experiment.resources[TRAINING]))
         experiment.set_terminal_labeling(terminal_labeling(experiment.read_corpus(experiment.resources[TRAINING]),
                                                            threshold=unk_threshold))
-    if parsing_mode == MULTI_OBJECTIVES:
+    if parsing_mode == NO_PARSING:
+        experiment.parsing_mode = NO_PARSING
+        experiment.run_experiment()
+    elif parsing_mode == MULTI_OBJECTIVES:
         experiment.parsing_mode = "discodop-multi-method"
         experiment.resources[RESULT] = ScorerAndWriter(experiment,
                                                        directory=experiment.directory,

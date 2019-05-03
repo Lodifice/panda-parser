@@ -431,6 +431,10 @@ class SplitMergeExperiment(Experiment):
                         self.build_score_validator(self.resources[VALIDATION])
                     self.write_stage_file()
 
+        if self.parsing_mode == "no-parsing":
+            print("Stopped experiment after training", file=self.logger)
+            return
+
         if self.stage[0] <= 4:
             if self.organizer.disable_split_merge and self.organizer.disable_em:
                 self.initialize_parser()
