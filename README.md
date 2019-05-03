@@ -55,7 +55,7 @@ Some of these concepts/algorithms have been described in the following articles:
 - general hybrid grammars, induction of LCFRS/sDCP hybrid grammars from discontinuous constituent trees and
     non-projective dependency trees [[Gebhardt/Nederhof/Vogler 2017]](https://doi.org/10.1162/COLI_a_00291)
 - generic split/merge training, in partiuclar for LCFRS and LCFRS/sDCP hybrid grammars 
-    [[Gebhardt 2018 (preprint)]](https://wwwtcs.inf.tu-dresden.de/~kilian/coling2018preprint.pdf)
+    [[Gebhardt 2018]](http://aclweb.org/anthology/C18-1258)
     
 Due to the nature of the software development process (research), it was run on just 1-3 machines and should be considered unstable. Interfaces are likely to be changed as needed for future extensions. Maintenance 
 is limited to Kilian's professional involvement in academic research.
@@ -120,7 +120,7 @@ directory)
 ------------------------------------------------------------------------
 
 
-## Documentation for the experiments in [[Gebhardt 2018 (preprint)]](https://wwwtcs.inf.tu-dresden.de/~kilian/coling2018preprint.pdf)
+## Documentation for the experiments in [[Gebhardt 2018]](http://aclweb.org/anthology/C18-1258)
 
 1. Obtain the data and locate it under `res/` as described above for SPMRL_SHARED_2014_NO_ARABIC, the TiGer HN08 split, and  predicted POS tags for TiGer HN08 split.
  

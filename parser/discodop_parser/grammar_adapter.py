@@ -56,7 +56,7 @@ def transform_grammar_cfg_approx(grammar):
             fake_nont = escape_brackets(rule.lhs().nont()) + "-" + str(rule.get_idx()) + appendix
             trans_rule_fake = (escape_brackets(rule.lhs().nont()) + appendix, fake_nont), ((0,),)
             yield trans_rule_fake, rule.weight()
-            # todo: rules fanout > 1 get suppressed in CFG chart because they are accouned for
+            # todo: rules fanout > 1 get suppressed in CFG chart because they are accounted for
             # todo: with rule.weight()^fanout. This alternative (is inproper) but doesn't work well.
             # yield trans_rule_fake, pow(rule.weight(), 1.0 / rule.lhs().fanout())
 
