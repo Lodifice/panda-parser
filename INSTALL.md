@@ -30,7 +30,7 @@ cd ../..
 
 ## Install disco-dop with exposed charts
  
-Install the patched version of `disco-dop` from branch [chart-exposure-merge](https://github.com/kilian-gebhardt/disco-dop/tree/chart-exposure-merge).
+Install the patched version of `disco-dop` from branch [chart-exposure](https://github.com/kilian-gebhardt/disco-dop/tree/chart-exposure).
 
 ------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ This requires Eigen to be installed (see above):
 
 1. `cd` project dir
 2. modify `setup.py`, if eigen is installed in non-standard location. This can be done by setting the `compute_root` variable.
-2. `python2 setup.py build_ext --inplace`
+2. `python3 setup.py build_ext --inplace`
 
 
 ------------------------------------------------------------------------
@@ -63,7 +63,7 @@ First download OpenFST: http://www.openfst.org/twiki/bin/view/FST/FstDownload
 
 0. `COMPUTE_ROOT="/compute/user"` # Set root of local installation to a user-owned directory
 1. `cd openfst`
-2. `./configure --prefix=$COMPUTE_ROOT/usr/local --enable-bin --enable-compact-fsts --enable-compress --enable-const-fsts --enable-far --enable-linear-fsts --enable-lookahead-fsts --enable-mpdt --enable-ngram-fsts --enable-pdt --enable-python PYTHON=python2`
+2. `./configure --prefix=$COMPUTE_ROOT/usr/local --enable-bin --enable-compact-fsts --enable-compress --enable-const-fsts --enable-far --enable-linear-fsts --enable-lookahead-fsts --enable-mpdt --enable-ngram-fsts --enable-pdt --enable-python PYTHON=python3`
 3. `make` # this takes some time
 4. `make install`
 
@@ -72,7 +72,7 @@ Download pynini: http://www.openfst.org/twiki/bin/view/GRM/PyniniDownload
 
 1. `cd pynini`
 2.  edit `setup.py`: add `"-I/compute/user/usr/local/include"` to COMPILE_ARGS (adapt path to COMPUTE_ROOT)
-3. `python2.7 setup.py install --user` # This may take a while
+3. `python3 setup.py install --user` # This may take a while
 
 ------------------------------------------------------------------------
 

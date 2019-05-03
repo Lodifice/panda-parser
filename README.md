@@ -28,9 +28,11 @@ with this program. If not, see [http://www.gnu.org/licenses/](http://www.gnu.org
 
 ## Overview
 
-This project contains software that is developed in the context of research
+Panda parser was developed in the context of research
 on *hybrid grammars* and grammar-based approaches to 
-natural language processing in general. 
+natural language processing in general. It is a 
+**p**arsing **a**rchitecture (especially) for **n**on-projective and **d**iscontinuous structures
+powered by universal **a**lgebra. Moreover, pandas are said to live in (parse) trees ;-).
 
 Currently implemented grammar types:
 - hybrid grammars coupling *linear context-free rewriting systems* (LCFRS) 
