@@ -222,7 +222,7 @@ class Positional(object):
     merge_percentage=('percentage of splits that is merged', 'option', None, float),
     predicted_pos=('use predicted POS-tags for evaluation', 'flag'),
     parsing_mode=('parsing mode for evaluation', 'option', None, str,
-                  [MULTI_OBJECTIVES, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT]),
+                  [MULTI_OBJECTIVES, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, NO_PARSING]),
     parsing_limit=('only evaluate on sentences of length up to 40', 'flag'),
     k_best=('k in k-best reranking parsing mode', 'option', None, int),
     directory=('directory in which experiment is run (default: mktemp)', 'option', None, str),
