@@ -512,7 +512,10 @@ def fringe_extract_lcfrs_recur(tree, fringes, gram, naming, term_labeling, isola
         dcp_rule = DCP_rule(dcp_lhs, dcp_rhs)
         dcp_rules += [dcp_rule]
     nont = id_nont(id_seq, tree, naming) + '/' + str(len(spans))
-    nont_feat = feats(id_seq, tree)
+    if feature_logging is not None:
+        nont_feat = feats(id_seq, tree)
+    else:
+        nont_feat = None
     lhs = LCFRS_lhs(nont)
     for arg in args:
         lhs.add_arg(arg)
@@ -551,7 +554,12 @@ def id_nont(id_seq, tree, naming):
 def token_to_features(token, isleaf=True):
     id_feat = [("function", token.edge())]
     if isleaf:
-        id_feat += [('form', token.form()), ('lemma', token.lemma()), ('pos', token.pos())] + token.morph_feats()
+        id_feat += [('form', token.form()), ('lemma', token.lemma()), ('pos', token.pos())]
+        if isinstance(token.morph_feats(), str):
+            assert(False and "Cannot handle morphological feature string!")
+        else:
+            assert(isinstance(id_feat, list))
+            id_feat.append(id_feat)
     else:
         id_feat += [('category', token.category())]
     return id_feat
