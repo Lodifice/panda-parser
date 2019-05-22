@@ -500,6 +500,10 @@ class HybridTree:
 
         return all(children)
 
+    def reset_edge_labels(self, label):
+        for node in self._id_to_token:
+            self.node_token(node).set_edge_label(label)
+
 
 class HybridDag(HybridTree):
     def __init__(self, sent_label):

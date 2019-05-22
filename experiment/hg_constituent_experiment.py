@@ -276,6 +276,7 @@ class InductionSettings:
         self.terminal_labeling = None
         self.isolate_pos = False
         self.naming_scheme = 'child'
+        self.edge_labels = True
         self.disconnect_punctuation = True
         self.normalize = False
         self.feature_la = False
@@ -724,6 +725,9 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
 
         features = defaultdict(lambda: 0) if self.induction_settings.feature_la else None
 
+        if not self.induction_settings.edge_labels:
+            obj.reset_edge_labels('--')
+
         tree_grammar = self.__grammar_induction(obj, part, features)
 
         if self.backoff:
@@ -753,6 +757,10 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
         if self.strip_vroot:
             for tree in corpus:
                 tree.strip_vroot()
+        if not self.induction_settings.edge_labels:
+            for tree in corpus:
+                tree.reset_edge_labels('--')
+            
         parser = self.organizer.training_reducts.get_parser() if self.organizer.training_reducts is not None else None
         nonterminal_map = self.organizer.nonterminal_map
         frequency = self.backoff_factor if self.backoff else 1.0
@@ -1008,6 +1016,7 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
     nonterminal_naming_scheme=('scheme for naming nonterminals', 'option', None, str,
                                ['strict', 'child']
                                + ['strict-markov-v-%i-h-%i' % p for p in itertools.product(range(0, 2), range(1, 4))]),
+    no_edge_labels=('do not include edge labels in sDCP', 'flag'),
     seed=('random seed for tie-breaking after splitting', 'option', None, int),
     threads=('number of threads during expectation step (requires compilation with OpenMP flag set)', 'option', None, int),
     em_epochs=('epochs of EM before split/merge training', 'option', None, int),
@@ -1028,6 +1037,7 @@ def main(split,
          unk_threshold=4,
          recursive_partitioning="fanout-2-left-to-right",
          nonterminal_naming_scheme="child",
+         no_edge_labels=False,
          seed=0,
          threads=8,
          em_epochs=20,
@@ -1050,6 +1060,7 @@ def main(split,
     induction_settings.normalize = True
     induction_settings.disconnect_punctuation = False
     induction_settings.naming_scheme = nonterminal_naming_scheme
+    induction_settings.edge_labels = not no_edge_labels
     induction_settings.isolate_pos = True
 
     experiment = ConstituentSMExperiment(induction_settings, directory=directory)
