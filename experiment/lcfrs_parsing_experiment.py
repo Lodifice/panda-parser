@@ -36,6 +36,7 @@ class InductionSettings:
         self.normalize = False
         self.disconnect_punctuation = True
         self.terminal_labeling = PosTerminals()
+        self.edge_labels = True
         # self.nont_labeling = NonterminalsWithFunctions()
         self.nont_labeling = BasicNonterminalLabeling()
         self.binarize = True
@@ -86,6 +87,8 @@ class LCFRSExperiment(ConstituentExperiment, SplitMergeExperiment):
                 htree_bin = _htree
                 break
         assert htree_bin is not None
+        if not self.induction_settings.edge_labels:
+            htree_bin.reset_edge_labels('--')
         grammar = direct_extract_lcfrs_from_prebinarized_corpus(htree_bin,
                                                                 term_labeling=self.terminal_labeling,
                                                                 nont_labeling=self.induction_settings.nont_labeling,
@@ -115,6 +118,8 @@ class LCFRSExperiment(ConstituentExperiment, SplitMergeExperiment):
         if not self.__valid_tree(obj):
             print(obj, list(map(str, obj.token_yield())), obj.full_yield())
             return None, None
+        if not self.induction_settings.edge_labels:
+            obj.reset_edge_labels('--')
         grammar = direct_extract_lcfrs(obj,
                                        term_labeling=self.terminal_labeling,
                                        nont_labeling=self.induction_settings.nont_labeling,
@@ -163,6 +168,11 @@ class LCFRSExperiment(ConstituentExperiment, SplitMergeExperiment):
         # sys.stdout.flush()
 
         training_corpus = list(filter(self.__valid_tree, self.read_corpus(resource)))
+
+        if not self.induction_settings.edge_labels:
+            for htree in training_corpus:
+                htree.reset_edge_labels('--')
+
         parser = self.organizer.training_reducts.get_parser() if self.organizer.training_reducts is not None else None
         nonterminal_map = self.organizer.nonterminal_map
         frequency = self.backoff_factor if self.backoff else 1.0
@@ -213,6 +223,7 @@ class Positional(object):
     unk_threshold=('threshold for unking rare words', 'option', None, int),
     h_markov=('horizontal Markovization', 'option', None, int),
     v_markov=('vertical Markovization', 'option', None, int),
+    no_edge_labels=('do not include edge labels in sDCP', 'flag'),
     quick=('run a small experiment (for testing/debugging)', 'flag'),
     seed=('random seed for tie-breaking after splitting', 'option', None, int),
     threads=('number of threads during expectation step (requires compilation with OpenMP flag set)', 'option', None, int),
@@ -234,6 +245,7 @@ def main(split,
          unk_threshold=4,
          h_markov=1,
          v_markov=1,
+         no_edge_labels=False,
          seed=0,
          threads=8,
          em_epochs=20,
@@ -260,6 +272,7 @@ def main(split,
                              "-h " + str(h_markov),
                              "-v " + str(v_markov)]
     induction_settings.discodop_binarization_params = binarization_settings
+    induction_settings.edge_labels = not no_edge_labels
 
     filters = []
     # filters += [check_single_child_label, lambda x: check_single_child_label(x, label="SB")]
