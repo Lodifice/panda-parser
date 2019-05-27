@@ -218,7 +218,7 @@ class Positional(object):
 
 
 @plac.annotations(
-    split=Positional('the corpus/split to run the experiment on', str, ["SPMRL", "HN08", "WSJ", "WSJ-km2003"]),
+    split=Positional('the corpus/split to run the experiment on', str, ["SPMRL", "HN08", "WSJ", "WSJ-km2003", "negraall"]),
     test_mode=('evaluate on test set instead of dev. set', 'flag'),
     unk_threshold=('threshold for unking rare words', 'option', None, int),
     h_markov=('horizontal Markovization', 'option', None, int),

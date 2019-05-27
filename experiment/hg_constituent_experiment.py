@@ -202,6 +202,27 @@ def setup_corpus_resources(split, dev_mode=True, quick=False, test_pred=False, t
             train_limit = train_start + 2000
             validation_size = validation_start + 200
             test_limit = test_input_limit = test_start + 200
+    elif split == "negraall":
+        corpus_type = "EXPORT"
+        train_start = validation_start = test_start = test_input_start = 1
+
+        if quick:
+            test_limit = validation_limit = test_input_limit = 200
+            train_limit = 5000
+        else:
+            test_limit = validation_limit = test_input_limit = 1000
+            train_limit = 18602
+        validation_size = validation_limit
+        train_path = "res/negraall/train.export"
+        validation_path = "res/negraall/dev.export"
+        if dev_mode:
+            test_path = test_input_path = validation_path
+        else:
+            test_path = test_input_path = "res/negraall/test.export"
+        corpus_type_test = 'EXPORT'
+        train_exclude = validation_exclude = test_exclude = test_input_exclude = []
+        train_filter = validation_filter = test_filter = test_input_filter = None
+
     else:
         raise ValueError("Unknown split: " + str(split))
 
@@ -1008,7 +1029,7 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
 
 
 @plac.annotations(
-    split=('the corpus/split to run the experiment on', 'positional', None, str, ["SPMRL", "HN08", "WSJ", "WSJ-km2003"]),
+    split=('the corpus/split to run the experiment on', 'positional', None, str, ["SPMRL", "HN08", "WSJ", "WSJ-km2003", "negraall"]),
     test_mode=('evaluate on test set instead of dev. set', 'flag'),
     quick=('run a small experiment (for testing/debugging)', 'flag'),
     unk_threshold=('threshold for unking rare words', 'option', None, int),
