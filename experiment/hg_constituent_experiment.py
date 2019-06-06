@@ -1055,7 +1055,7 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
 
 
 LABELING_STRATEGIES_BASE = ['strict', 'child'] \
-                           + ['strict-markov-v-%i-h-%i' % p for p in itertools.product(range(0, 2), range(1, 4))]
+                           + ['strict-markov-v-%i-h-%i' % p for p in itertools.product(range(0, 2), range(0, 4))]
 LABELING_STRATEGIES = LABELING_STRATEGIES_BASE + [ '%s-spans' % s for s in LABELING_STRATEGIES_BASE]
 
 
