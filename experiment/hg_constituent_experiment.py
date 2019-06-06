@@ -40,6 +40,9 @@ from experiment.resources import TRAINING, VALIDATION, TESTING, TESTING_INPUT, R
 from experiment.split_merge_experiment import SplitMergeExperiment
 
 
+SPLITS = ["SPMRL", "HN08", "WSJ", "WSJ-km2003", "negraall", "lassy-small"]
+
+
 def setup_corpus_resources(split, dev_mode=True, quick=False, test_pred=False, test_second_half=False):
     """
     :param split: A string specifying a particular corpus and split from the literature.
@@ -223,6 +226,29 @@ def setup_corpus_resources(split, dev_mode=True, quick=False, test_pred=False, t
         train_exclude = validation_exclude = test_exclude = test_input_exclude = []
         train_filter = validation_filter = test_filter = test_input_filter = None
 
+    elif split == "lassy-small":
+        corpus_type = "EXPORT"
+        train_start = validation_start = test_start = test_input_start = 1
+        if quick:
+            test_limit = validation_limit = test_input_limit = 200
+            train_limit = 5000
+        else:
+            if dev_mode:
+                test_limit = validation_limit = test_input_limit = 6520
+            else:
+                validation_limit = 6520
+                test_limit = test_input_limit = 6523
+            train_limit = 52157
+        validation_size = validation_limit
+        train_path = "res/lassy/lassytrain.norm.export"
+        validation_path = "res/lassy/lassydev.norm.export"
+        if dev_mode:
+            test_input_path = test_path = validation_path
+        else:
+            test_input_path = test_path = "res/lassy/lassytest.norm.export"
+        train_exclude = validation_exclude = test_exclude = test_input_exclude = []
+        train_filter = validation_filter = test_filter = test_input_filter = None
+        corpus_type_test = 'EXPORT'
     else:
         raise ValueError("Unknown split: " + str(split))
 
@@ -1034,7 +1060,7 @@ LABELING_STRATEGIES = LABELING_STRATEGIES_BASE + [ '%s-spans' % s for s in LABEL
 
 
 @plac.annotations(
-    split=('the corpus/split to run the experiment on', 'positional', None, str, ["SPMRL", "HN08", "WSJ", "WSJ-km2003", "negraall"]),
+    split=('the corpus/split to run the experiment on', 'positional', None, str, SPLITS),
     test_mode=('evaluate on test set instead of dev. set', 'flag'),
     quick=('run a small experiment (for testing/debugging)', 'flag'),
     unk_threshold=('threshold for unking rare words', 'option', None, int),

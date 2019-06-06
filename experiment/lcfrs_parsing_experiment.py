@@ -16,7 +16,7 @@ from experiment.resources import TRAINING, VALIDATION, TESTING, TESTING_INPUT, R
 from experiment.split_merge_experiment import SplitMergeExperiment
 from experiment.hg_constituent_experiment import ConstituentExperiment, ScoringExperiment, ScorerAndWriter, \
     setup_corpus_resources, MULTI_OBJECTIVES, MULTI_OBJECTIVES_INDEPENDENT, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, \
-    NO_PARSING
+    NO_PARSING, SPLITS
 
 TEST_SECOND_HALF = False  # parse second half of test set
 
@@ -218,7 +218,7 @@ class Positional(object):
 
 
 @plac.annotations(
-    split=Positional('the corpus/split to run the experiment on', str, ["SPMRL", "HN08", "WSJ", "WSJ-km2003", "negraall"]),
+    split=Positional('the corpus/split to run the experiment on', str, SPLITS),
     test_mode=('evaluate on test set instead of dev. set', 'flag'),
     unk_threshold=('threshold for unking rare words', 'option', None, int),
     h_markov=('horizontal Markovization', 'option', None, int),
@@ -266,8 +266,13 @@ def main(split,
     induction_settings.disconnect_punctuation = False
     induction_settings.normalize = True
     induction_settings.use_discodop_binarization = True
-    binarization_settings = ["--headrules=" + ("util/negra.headrules" if split in ["SPMRL", "HN08"]
-                                               else "util/ptb.headrules"),
+    if split in ['SPMRL', 'HN08', 'negraall']:
+        headrules = "util/negra.headrules"
+    elif split in ['lassy-small']:
+        headrules = 'util/alpino.headrules'
+    else:
+        headrules = 'util/ptb.headrules'
+    binarization_settings = ["--headrules=" + headrules,
                              "--binarize",
                              "-h " + str(h_markov),
                              "-v " + str(v_markov)]
