@@ -526,7 +526,34 @@ def fringe_extract_lcfrs_recur(tree, fringes, gram, naming, term_labeling, isola
     return nont, spans, id_seq, nont_feat
 
 
-STRICT_MARKOV_REGEX = re.compile(r'strict-markov-v-(\d+)-h-(\d+)')
+STRICT_MARKOV_REGEX = re.compile(r'strict-markov-v-(\d+)-h-(\d+)(-span)?')
+STRICT_REGEX = re.compile(r'strict(-span)?')
+CHILD_REGEX = re.compile(r'child(-span)?')
+
+
+def compute_span_features(id_seq, tree):
+    """
+    :param id_seq:
+    :type id_seq:
+    :param tree:
+    :type tree: ConstituentTree
+    :return:
+    :rtype: str
+    """
+    min_index = None  # len(tree.id_yield())
+    max_index = None  # 0
+    for ids in id_seq:
+        first = min(tree.fringe(ids[0]))
+        last = max(tree.fringe(ids[-1]))
+        if min_index is None or min_index > first:
+            min_index = first
+        if max_index is None or max_index < last:
+            max_index = last
+    assert min_index is not None
+    assert max_index is not None
+    left_pos = tree.leaf_pos(tree.index_leaf(min_index))
+    right_pos = tree.leaf_pos(tree.index_leaf(max_index))
+    return '-span(' + left_pos + '-' + right_pos + ')'
 
 
 def id_nont(id_seq, tree, naming):
@@ -537,18 +564,26 @@ def id_nont(id_seq, tree, naming):
     :rtype: str
     Past labels of ids together.
     """
-    if naming == 'strict':
-        return id_nont_strict(id_seq, tree)
-    elif naming == 'child':
-        return id_nont_child(id_seq, tree)
-    else:
-        m = STRICT_MARKOV_REGEX.match(naming)
-        if m:
-            h = int(m.group(2))
-            v = int(m.group(1))
-            return id_nont_markov(id_seq, tree, v, h)
-        else:
-            raise Exception('unknown naming ' + naming)
+    sf = ""
+    m = STRICT_MARKOV_REGEX.match(naming)
+    if m:
+        h = int(m.group(2))
+        v = int(m.group(1))
+        if m.group(3) == '-span':
+            sf = compute_span_features(id_seq, tree)
+        return id_nont_markov(id_seq, tree, v, h) + sf
+    m = STRICT_REGEX.match(naming)
+    if m:
+        if m.group(1) == '-span':
+            sf = compute_span_features(id_seq, tree)
+        return id_nont_strict(id_seq, tree) + sf
+    m = CHILD_REGEX.match(naming)
+    if m:
+        if m.group(1) == '-span':
+            sf = compute_span_features(id_seq, tree)
+        return id_nont_child(id_seq, tree) + sf
+
+    raise Exception('unknown naming ' + naming)
 
 
 def token_to_features(token, isleaf=True):

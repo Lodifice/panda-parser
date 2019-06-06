@@ -121,6 +121,21 @@ class ConstituentTreeTest(unittest.TestCase):
         grammar = fringe_extract_lcfrs(tree, rec_part(tree), naming=naming, isolate_pos=True)
         print(grammar)
 
+    def test_induction_with_spans(self):
+        naming = 'child-spans'
+
+        def rec_part(tree):
+            return left_branching_partitioning(len(tree.id_yield()))
+            # return fanout_k_left_to_right(tree, 1)
+
+        tree = self.tree
+        tree.add_to_root("VP1")
+
+        print(tree)
+
+        grammar = fringe_extract_lcfrs(tree, rec_part(tree), naming=naming, isolate_pos=True)
+        print(grammar)
+
     def test_induction_2(self):
         def rec_part(tree):
             return left_branching_partitioning(len(tree.id_yield()))

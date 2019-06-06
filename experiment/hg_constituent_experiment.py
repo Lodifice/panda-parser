@@ -1028,15 +1028,18 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
         self.terminal_labeling = PatchedTerminalLabeling2(self.induction_settings.terminal_labeling, lookup)
 
 
+LABELING_STRATEGIES_BASE = ['strict', 'child'] \
+                           + ['strict-markov-v-%i-h-%i' % p for p in itertools.product(range(0, 2), range(1, 4))]
+LABELING_STRATEGIES = LABELING_STRATEGIES_BASE + [ '%s-spans' % s for s in LABELING_STRATEGIES_BASE]
+
+
 @plac.annotations(
     split=('the corpus/split to run the experiment on', 'positional', None, str, ["SPMRL", "HN08", "WSJ", "WSJ-km2003", "negraall"]),
     test_mode=('evaluate on test set instead of dev. set', 'flag'),
     quick=('run a small experiment (for testing/debugging)', 'flag'),
     unk_threshold=('threshold for unking rare words', 'option', None, int),
     recursive_partitioning=('recursive partitioning strategy', 'option', None, str),
-    nonterminal_naming_scheme=('scheme for naming nonterminals', 'option', None, str,
-                               ['strict', 'child']
-                               + ['strict-markov-v-%i-h-%i' % p for p in itertools.product(range(0, 2), range(1, 4))]),
+    nonterminal_naming_scheme=('scheme for naming nonterminals', 'option', None, str, LABELING_STRATEGIES),
     no_edge_labels=('do not include edge labels in sDCP', 'flag'),
     seed=('random seed for tie-breaking after splitting', 'option', None, int),
     threads=('number of threads during expectation step (requires compilation with OpenMP flag set)', 'option', None, int),
