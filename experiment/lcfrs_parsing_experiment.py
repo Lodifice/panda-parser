@@ -1,6 +1,5 @@
 from __future__ import print_function
-import tempfile
-import subprocess
+
 from parser.discodop_parser.parser import DiscodopKbestParser
 try:
     from parser.gf_parser.gf_interface import GFParser_k_best
@@ -10,32 +9,22 @@ from parser.sDCP_parser.sdcp_trace_manager import compute_reducts, PySDCPTraceMa
 import plac
 from constituent.induction import direct_extract_lcfrs, BasicNonterminalLabeling, \
     direct_extract_lcfrs_from_prebinarized_corpus
-from grammar.induction.terminal_labeling import PosTerminals, FrequencyBiasedTerminalLabeling, \
-    FormTerminals, CompositionalTerminalLabeling
-from experiment.resources import TRAINING, VALIDATION, TESTING, TESTING_INPUT, RESULT, CorpusFile
+from experiment.resources import TRAINING, VALIDATION, TESTING, TESTING_INPUT, RESULT
 from experiment.split_merge_experiment import SplitMergeExperiment
-from experiment.hg_constituent_experiment import ConstituentExperiment, ScoringExperiment, ScorerAndWriter, \
-    setup_corpus_resources, MULTI_OBJECTIVES, MULTI_OBJECTIVES_INDEPENDENT, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, \
-    NO_PARSING, SPLITS
+from experiment.hg_constituent_experiment import ConstituentExperiment, ScorerAndWriter, MULTI_OBJECTIVES, \
+    MULTI_OBJECTIVES_INDEPENDENT, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, NO_PARSING, BACKOFF
+from experiment.constituent_experiment_helpers import setup_corpus_resources, SPLITS, construct_terminal_labeling, \
+    TERMINAL_LABELINGS
+
 
 TEST_SECOND_HALF = False  # parse second half of test set
-
-# FINE_TERMINAL_LABELING = FeatureTerminals(token_to_features, feature_filter=my_feature_filter)
-# FINE_TERMINAL_LABELING = FormTerminals()
-FINE_TERMINAL_LABELING = CompositionalTerminalLabeling(FormTerminals(), PosTerminals())
-FALLBACK_TERMINAL_LABELING = PosTerminals()
-DEFAULT_RARE_WORD_THRESHOLD = 10
-
-
-def terminal_labeling(corpus, threshold=DEFAULT_RARE_WORD_THRESHOLD):
-    return FrequencyBiasedTerminalLabeling(FINE_TERMINAL_LABELING, FALLBACK_TERMINAL_LABELING, corpus, threshold)
 
 
 class InductionSettings:
     def __init__(self):
         self.normalize = False
         self.disconnect_punctuation = True
-        self.terminal_labeling = PosTerminals()
+        self.terminal_labeling = None
         self.edge_labels = True
         # self.nont_labeling = NonterminalsWithFunctions()
         self.nont_labeling = BasicNonterminalLabeling()
@@ -220,7 +209,9 @@ class Positional(object):
 @plac.annotations(
     split=Positional('the corpus/split to run the experiment on', str, SPLITS),
     test_mode=('evaluate on test set instead of dev. set', 'flag'),
+    terminal_labeling=('style of terminals in grammar', 'option', None, str, TERMINAL_LABELINGS),
     unk_threshold=('threshold for unking rare words', 'option', None, int),
+    terminal_backoff=('add "all backoff" version of sentences to training/validation corpus', 'option', None, str, BACKOFF),
     h_markov=('horizontal Markovization', 'option', None, int),
     v_markov=('vertical Markovization', 'option', None, int),
     no_edge_labels=('do not include edge labels in sDCP', 'flag'),
@@ -242,7 +233,9 @@ class Positional(object):
 def main(split,
          test_mode=False,
          quick=False,
+         terminal_labeling='form+pos',
          unk_threshold=4,
+         terminal_backoff='auto',
          h_markov=1,
          v_markov=1,
          no_edge_labels=False,
@@ -295,7 +288,16 @@ def main(split,
     if parsing_limit:
         experiment.max_sentence_length_for_parsing = 40
 
-    experiment.backoff = True
+    if terminal_backoff == 'yes':
+        experiment.backoff = True
+    elif terminal_backoff == 'no':
+        experiment.backoff = False
+    elif terminal_backoff == 'auto':
+        if terminal_labeling == 'form+pos':
+            experiment.backoff = True
+        else:
+            experiment.backoff = False
+
     experiment.organizer.validator_type = "SIMPLE"
     experiment.organizer.project_weights_before_parsing = True
     experiment.organizer.disable_em = False
@@ -314,9 +316,12 @@ def main(split,
 
     # only effective if no terminal labeling was read from stage file
     if experiment.terminal_labeling is None:
-        # StanfordUNKing(experiment.read_corpus(experiment.resources[TRAINING]))
-        experiment.set_terminal_labeling(terminal_labeling(experiment.read_corpus(experiment.resources[TRAINING]),
-                                                           threshold=unk_threshold))
+        experiment.set_terminal_labeling(
+            construct_terminal_labeling(
+                terminal_labeling,
+                experiment.read_corpus(experiment.resources[TRAINING]),
+                threshold=unk_threshold)
+        )
     if parsing_mode == NO_PARSING:
         experiment.parsing_mode = NO_PARSING
         experiment.run_experiment()

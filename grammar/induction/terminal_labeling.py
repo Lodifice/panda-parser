@@ -109,6 +109,50 @@ class FrequencyBiasedTerminalLabeling(TerminalLabeling):
         )
 
 
+class FrequentSuffixTerminalLabeling(TerminalLabeling):
+    """
+    Terminal labeling where each form is replaced by its longest suffix that appears
+    more than `threshold` times. Inspired by David Hall, Greg Durrett, Dan Klein (2014),
+    https://www.aclweb.org/anthology/papers/P/P14/P14-1022/
+    """
+    def __init__(self, corpus=None, threshold=100, suffixes=None):
+        if suffixes is None:
+            suffixes = defaultdict(lambda: 0)
+            for tree in corpus:
+                for token in tree.token_yield():
+                    form = "BOW__%s" % token.form()
+                    suffixes[form] += 1
+                    for x in range(5, len(form)):
+                        suffixes[form[x:]] += 1
+            self.suffixes = frozenset(s for s in suffixes if suffixes[s] >= threshold)
+        else:
+            self.suffixes = suffixes
+        self.threshold = threshold
+
+    def token_label(self, token, _loc=None):
+        form = 'BOW__%s' % token.form()
+        if form in self.suffixes:
+            return form
+        for x in range(5, len(form)):
+            if form[x:] in self.suffixes:
+                return form[x:]
+        return 'UNKNOWN'
+
+    def __str__(self):
+        return 'frequent-suffixes[%d]' % self.threshold
+
+    def serialize(self):
+        return {'type': self.__class__.__name__,
+                'threshold': self.threshold,
+                'known_suffixes': [s for s in self.suffixes]}
+
+    @staticmethod
+    def deserialize(json_object):
+        suffixes = frozenset({x for x in json_object['known_suffixes']})
+        threshold = json_object['threshold']
+        return FrequentSuffixTerminalLabeling(threshold=threshold, suffixes=suffixes)
+
+
 class CompositionalTerminalLabeling(TerminalLabeling):
     def __init__(self, first_labeling, second_labeling, binding_string="__+__"):
         self.first_labeling = first_labeling
