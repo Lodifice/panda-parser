@@ -38,8 +38,9 @@ class CustomBuildExtCommand(build_ext):
         build_ext.run(self)
 
     def download_schick_parser(self):
-        x = subprocess.call(["wget", "https://wwwtcs.inf.tu-dresden.de/~kilian/HypergraphReduct-1.0-SNAPSHOT.jar", "-P", "util"])
-        assert x == 0
+        if not path.exists("util/HypergraphReduct-1.0-SNAPSHOT.jar"):
+            x = subprocess.call(["wget", "https://wwwtcs.inf.tu-dresden.de/~kilian/HypergraphReduct-1.0-SNAPSHOT.jar", "-P", "util"])
+            assert x == 0
 
     def build_schick_parser(self):
         print("Building " + schick_dep_name + " using Maven.")
