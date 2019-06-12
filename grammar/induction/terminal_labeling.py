@@ -21,7 +21,7 @@ class TerminalLabeling:
         elif token.type() == "CONSTITUENT-CATEGORY":
             return token.category() + " : " + token.edge()
         else:
-            return self.token_label(token) + " : " + token.edge()
+            return " : ".join([self.token_label(token), token.pos(), token.edge()])
 
     def prepare_parser_input(self, tokens):
         return [self.token_label(token, _loc) for _loc, token in enumerate(tokens)]

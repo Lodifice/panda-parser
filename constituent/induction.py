@@ -593,8 +593,8 @@ def token_to_features(token, isleaf=True):
         if isinstance(token.morph_feats(), str):
             assert(False and "Cannot handle morphological feature string!")
         else:
-            assert(isinstance(id_feat, list))
-            id_feat.append(id_feat)
+            assert(isinstance(token.morph_feats(), list))
+            id_feat += token.morph_feats()
     else:
         id_feat += [('category', token.category())]
     return id_feat
@@ -769,7 +769,7 @@ def make_fringe_terms(tree, seq, child_seqss, term_to_pos, term_labeling):
             if tree.is_leaf(elem):
                 k = tree.leaf_index(elem)
                 pos = term_to_pos[k]
-                terms.append(DCP_term(DCP_index(pos, tree.node_token(elem).edge()), []))
+                terms.append(DCP_term(DCP_index(pos, tree.node_token(elem).edge(), tree.node_token(elem).pos()), []))
             else:
                 lab = tree.node_token(elem).category()
                 arg = make_fringe_terms(tree, tree.children(elem), \

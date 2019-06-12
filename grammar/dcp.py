@@ -123,12 +123,18 @@ class DCP_index(DCP_rhs_object):
     Terminals are indexed in left-to-right order.
     """
 
-    # Constructor.
-    # i: int
-    # edge_label: string
-    def __init__(self, i, edge_label=None):
+    def __init__(self, i, edge_label=None, pos=None):
+        """
+        :param i: Position in some string
+        :type i: int
+        :param edge_label: label on edge to parent
+        :type edge_label: str
+        :param pos: part-of-speech tag
+        :type pos: str
+        """
         self.__i = i
         self.__edge_label = edge_label
+        self.__pos = pos
 
     # The index.
     # return: int
@@ -138,14 +144,17 @@ class DCP_index(DCP_rhs_object):
     def edge_label(self):
         return self.__edge_label
 
+    def pos(self):
+        return self.__pos
+
     # String representation.
     # return: string
     def __str__(self):
-        if self.__edge_label:
-            s = ':{' + self.__edge_label + '}'
+        if self.__edge_label or self.__pos:
+            s = ':{%s}' % (','.join(x for x in [self.__edge_label, self.__pos] if x is not None))
         else:
             s = ''
-        return '[' + str(self.index()) + s + ']'
+        return '[%d%s]' % (self.index(), s)
 
     # Evaluator Invocation
     def visitMe(self, visitor, id=None):
@@ -192,11 +201,20 @@ class DCP_position:
     """
 
     # Constructor.
-    # pos: int
+    # posi: int
     # edge_label: string
-    def __init__(self, position, edge_label=None):
+    def __init__(self, position, edge_label: str = None, pos: str = None):
+        """
+        :param position: Position in some string
+        :type position: int
+        :param edge_label: label on edge to parent
+        :type edge_label: str
+        :param pos: part-of-speech tag
+        :type pos: str
+        """
         self.__position = position
         self.__edge_label = edge_label
+        self.__pos = pos
 
     # The position.
     # return: int
@@ -206,14 +224,17 @@ class DCP_position:
     def edge_label(self):
         return self.__edge_label
 
+    def pos(self):
+        return self.__pos
+
     # String representation.
     # return: string
     def __str__(self):
-        if self.__edge_label:
-            s = ':{' + self.__edge_label + '}'
+        if self.__edge_label or self.__pos:
+            s = ':{%s}' % (','.join(x for x in [self.__edge_label, self.__pos] if x is not None))
         else:
             s = ''
-        return '[' + str(self.position()) + s + ']'
+        return '[%d%s]' % (self.__position, s)
 
 
 class DCP_term(DCP_rhs_object):

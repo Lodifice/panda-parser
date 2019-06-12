@@ -63,7 +63,7 @@ class DCP_evaluator(DCP_visitor):
     def visit_index(self, index, id):
         i = index.index()
         position = sorted(self.__der.terminal_positions(id))[i]
-        return DCP_position(position, index.edge_label())
+        return DCP_position(position, index.edge_label(), index.pos())
 
     # term: DCP_term
     def visit_term(self, term, id):
@@ -117,9 +117,11 @@ def dcp_to_hybridtree(tree, dcp, tokens, ignore_punctuation, construct_token, re
 # return: pair of string
 def dcp_to_hybridtree_recur(dcp, tree, next_id, construct_token):
     head = dcp.head()
+    pos_tag = None
     if isinstance(head, DCP_position):
         # FIXME : inconsistent counting of positions in hybrid tree requires -1
         id = str(head.position() - 1)
+        pos_tag = head.pos()
     elif isinstance(head, DCP_string):
         label = head
         id = str(next_id)
@@ -130,6 +132,8 @@ def dcp_to_hybridtree_recur(dcp, tree, next_id, construct_token):
         raise Exception
     if head.edge_label() is not None:
         tree.node_token(id).set_edge_label(head.edge_label())
+    if pos_tag is not None:
+        tree.node_token(id).set_pos_tag(pos_tag)
     for child in dcp.arg():
         (tree_child, next_id) = \
             dcp_to_hybridtree_recur(child, tree, next_id, construct_token)

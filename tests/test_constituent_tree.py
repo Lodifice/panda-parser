@@ -9,10 +9,14 @@ from grammar.induction.recursive_partitioning import fanout_k_left_to_right, lef
 from collections import defaultdict
 from constituent.construct_morph_annotation import build_nont_splits_dict, pos_cat_feats
 from util.enumerator import Enumerator
+from parser.naive.parsing import LCFRS_parser
+from grammar.induction.terminal_labeling import FormTerminals
+from parser.sDCPevaluation.evaluator import dcp_to_hybridtree, DCP_evaluator
+from hybridtree.monadic_tokens import construct_constituent_token
 
 
 class ConstituentTreeTest(unittest.TestCase):
-    def test_something(self):
+    def test_basic_tree_methods(self):
         tree = self.tree
         print("rooted", tree.root)
         tree.add_to_root("VP1")
@@ -120,6 +124,41 @@ class ConstituentTreeTest(unittest.TestCase):
 
         grammar = fringe_extract_lcfrs(tree, rec_part(tree), naming=naming, isolate_pos=True)
         print(grammar)
+
+    def test_induction_and_parsing_with_pos_recovery(self):
+        naming = 'child'
+
+        def rec_part(tree):
+            return left_branching_partitioning(len(tree.id_yield()))
+
+        tree = self.tree
+        tree.add_to_root("VP1")
+
+        print(tree)
+
+        grammar = fringe_extract_lcfrs(tree, rec_part(tree), naming=naming, isolate_pos=True,
+                                       term_labeling=FormTerminals())
+        print(grammar)
+
+        parser = LCFRS_parser(grammar)
+        parser.set_input([token.form() for token in tree.token_yield()])
+        parser.parse()
+        self.assertTrue(parser.recognized())
+        derivation = parser.best_derivation_tree()
+        e = DCP_evaluator(derivation)
+        dcp_term = e.getEvaluation()
+        print(str(dcp_term[0]))
+        t = ConstituentTree()
+        dcp_to_hybridtree(t,
+                          dcp_term,
+                          [construct_constituent_token(token.form(), '--', True) for token in tree.token_yield()],
+                          ignore_punctuation=False,
+                          construct_token=construct_constituent_token)
+        print(t)
+        self.assertEqual(len(tree.token_yield()), len(t.token_yield()))
+        for tok1, tok2 in zip(tree.token_yield(), t.token_yield()):
+            self.assertEqual(tok1.form(), tok2.form())
+            self.assertEqual(tok1.pos(), tok2.pos())
 
     def test_induction_with_spans(self):
         naming = 'child-spans'

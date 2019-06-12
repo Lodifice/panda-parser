@@ -64,6 +64,9 @@ class CoNLLToken(MonadicToken):
     def set_edge_label(self, deprel):
         self.__deprel = deprel
 
+    def set_pos_tag(self, pos: str):
+        self.__pos = pos
+
     def __str__(self):
         return self.form() + ' : ' + self.pos() + ' : ' + self.deprel()
 
@@ -143,6 +146,9 @@ class ConstituentTerminal(ConstituencyToken):
 
     def type(self):
         return "CONSTITUENT-TERMINAL"
+
+    def set_pos_tag(self, pos: str):
+        self.__pos = pos
 
 
 class ConstituentCategory(ConstituencyToken):

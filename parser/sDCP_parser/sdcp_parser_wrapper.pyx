@@ -178,19 +178,13 @@ class STermConverter(gd.DCP_visitor):
             if terminal:
                break
 
-        # Dependency tree or constituent tree with labeled edges
-        if index.edge_label() is not None:
-            self.builder.add_linked_terminal(self.terminal_encoder(terminal + " : " + index.edge_label()), i)
-        # Constituent tree without labeled edges
-        else:
-            self.builder.add_linked_terminal(self.terminal_encoder(terminal), i)
+        # Join label of LCFRS-terminal symbol with POS tag and edge label if existent
+        self.builder.add_linked_terminal(self.terminal_encoder(
+            " : ".join(x for x in [terminal, index.pos(), index.edge_label()] if x is not None)), i)
 
     def visit_string(self, s, id):
-        # print s
-        if s.edge_label() is not None:
-            self.builder.add_terminal(self.terminal_encoder(s.get_string() + " : " + str(s.edge_label())))
-        else:
-            self.builder.add_terminal(self.terminal_encoder(s.get_string()))
+        self.builder.add_terminal(self.terminal_encoder(
+            " : ".join(str(x) for x in [s.get_string(), s.edge_label()] if x is not None)))
 
     def visit_variable(self, var, id):
         # print var

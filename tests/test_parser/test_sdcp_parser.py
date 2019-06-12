@@ -9,7 +9,7 @@ from dependency.induction import induce_grammar
 from dependency.labeling import the_labeling_factory
 from grammar.induction.decomposition import fanout_limited_partitioning
 from grammar.induction.recursive_partitioning import cfg
-from grammar.induction.terminal_labeling import the_terminal_labeling_factory, PosTerminals, FormPosTerminalsUnk
+from grammar.induction.terminal_labeling import the_terminal_labeling_factory, PosTerminals, FormPosTerminalsUnk, FormTerminals
 from grammar.lcfrs import LCFRS
 from hybridtree.constituent_tree import ConstituentTree
 from hybridtree.general_hybrid_tree import HybridTree
@@ -63,8 +63,9 @@ class sDCPParserTest(unittest.TestCase):
     def test_basic_sdcp_parsing_constituency(self):
         tree1 = constituent_tree_1()
         tree2 = constituent_tree_2()
+        tree3 = constituent_tree_1_pos_stripped()
 
-        terminal_labeling = FormPosTerminalsUnk([tree1, tree2], 1, filter=["VP"])
+        terminal_labeling = FormTerminals() # [tree1, tree2], 1, filter=["VP"])
         fanout = 1
 
         grammar = LCFRS('START')
@@ -95,10 +96,21 @@ class sDCPParserTest(unittest.TestCase):
         for der in parser.all_derivation_trees():
             print(der)
             output_tree = ConstituentTree(tree1.sent_label())
-            tokens = tree1.token_yield()
+            tokens = [construct_constituent_token(token.form(), '--', True) for token in tree1.token_yield()]
             dcp_to_hybridtree(output_tree, DCP_evaluator(der).getEvaluation(), tokens, False,
                               construct_constituent_token)
             print(tree1)
+            print(output_tree)
+
+        parser = parser_type(grammar, tree3)
+        print(parser.recognized())
+        for der in parser.all_derivation_trees():
+            print(der)
+            output_tree = ConstituentTree(tree3.sent_label())
+            tokens = [construct_constituent_token(token.form(), '--', True) for token in tree3.token_yield()]
+            dcp_to_hybridtree(output_tree, DCP_evaluator(der).getEvaluation(), tokens, False,
+                              construct_constituent_token)
+            print(tree3)
             print(output_tree)
 
         print("completed test", file=stderr)
@@ -484,6 +496,29 @@ def constituent_tree_2():
     tree.add_child("S", "VP")
 
     tree.add_to_root("S")
+
+    return tree
+
+
+def constituent_tree_1_pos_stripped():
+    tree = ConstituentTree("s1")
+    tree.add_leaf("f1", "--", "hat")
+    tree.add_leaf("f2", "--", "schnell")
+    tree.add_leaf("f3", "--", "gearbeitet")
+    tree.add_punct("f4", "--", ".")
+
+    tree.set_label("V", "V")
+    tree.add_child("V", "f1")
+    tree.add_child("V", "f3")
+
+    tree.set_label("ADV", "ADV")
+    tree.add_child("ADV", "f2")
+
+    tree.set_label("VP", "VP")
+    tree.add_child("VP", "V")
+    tree.add_child("VP", "ADV")
+
+    tree.add_to_root("VP")
 
     return tree
 
