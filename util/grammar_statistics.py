@@ -6,9 +6,12 @@ from grammar.induction.terminal_labeling import deserialize_labeling
 
 @plac.annotations(
     directory=('directory in which experiment is run (default: .)', 'option', 'd', str),
-    posinfo=('comma-separated list of POS to show statistics on (default: "")', 'option', None, str)
+    posinfo=('comma-separated list of POS to show statistics on (default: "")', 'option', None, str),
+    showpos=('show list of POS tags', 'flag'),
+    allposinfo=('show statistics for all POS tags', 'flag'),
+    number=('number of lexical entries per POS tag', 'option', 'n', int)
 )
-def main(directory: str = '.', posinfo: str = ''):
+def main(directory: str = '.', posinfo: str = '', showpos=False, allposinfo=False, number=1):
     rootpath = os.path.abspath(directory)
     def changepath(path):
         return os.path.join(rootpath, os.path.split(path)[1])
@@ -52,27 +55,36 @@ def main(directory: str = '.', posinfo: str = ''):
 
         enumerator = training_reducts.get_nonterminal_map()
 
-        print("All lexical categories:")
-        print(' '.join(sorted(lexical_categories)))
+        if showpos:
+            print("All lexical categories:")
+            print(' '.join(sorted(lexical_categories)))
 
-        print("\nLexical rule statistics:")
-        for pos in sorted(lexical_categories):
-            if pos in posinfo.split(','):
-                idx = enumerator.object_index(pos + '/1')
-                print(pos, "idx:", idx, "las", la[0][idx])
-                maximal_vals = [0.0 for _ in range(la[0][idx])]
-                maximal_lex_rules = [None for _ in range(la[0][idx])]
-                for r in gr.rules():
-                    if r.rhs() == [] and r.lhs().nont() == pos + '/1':
-                        # print(r, r.get_idx(), end=' ')
-                        # print(la[2][r.get_idx()])
-                        for v, prob in enumerate(la[2][r.get_idx()]):
-                            if maximal_vals[v] < prob:
-                                maximal_vals[v] = prob
-                                maximal_lex_rules[v] = r
-                for v, r, p in zip(range(la[0][idx]), maximal_lex_rules, maximal_vals):
-                    print(v, r.lhs().arg(0)[0], p)
-                print()
+        if posinfo or allposinfo:
+            print("\nLexical rule statistics:")
+            for pos in sorted(lexical_categories):
+                if allposinfo or pos in posinfo.split(','):
+                    idx = enumerator.object_index(pos + '/1')
+                    print(pos, "idx:", idx, "las", la[0][idx])
+                    maximal_vals = [[0.0 for _ in range(number)] for _ in range(la[0][idx])]
+                    maximal_lex_rules = [[None for _ in range(number)] for _ in range(la[0][idx])]
+                    for r in gr.rules():
+                        if r.rhs() == [] and r.lhs().nont() == pos + '/1':
+                            # print(r, r.get_idx(), end=' ')
+                            # print(la[2][r.get_idx()])
+                            for v, prob in enumerate(la[2][r.get_idx()]):
+                                if maximal_vals[v][-1] < prob:
+                                    for i in range(number):
+                                        if maximal_vals[v][i] < prob:
+                                            maximal_vals[v] = maximal_vals[v][0:i] + [prob] + maximal_vals[v][i:-1]
+                                            maximal_lex_rules[v] = maximal_lex_rules[v][0:i] + [r] + maximal_lex_rules[v][i:-1]
+                                            break
+                    for v, r, p in zip(range(la[0][idx]), maximal_lex_rules, maximal_vals):
+                        print(v, end=' ')
+                        for rr, pp in zip(r, p):
+                            if rr is not None:
+                                print('[', rr.lhs().arg(0)[0], ' # ', pp, ']', end=' ')
+                        print()
+                    print()
 
     else:
         print('No stage file found in', rootpath)
