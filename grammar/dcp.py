@@ -145,7 +145,11 @@ class DCP_index(DCP_rhs_object):
         return self.__edge_label
 
     def pos(self):
-        return self.__pos
+        # NB: try/except is legacy code to support loading grammars trained before POS-field was added
+        try:
+            return self.__pos
+        except AttributeError:
+            return None
 
     # String representation.
     # return: string
@@ -225,7 +229,11 @@ class DCP_position:
         return self.__edge_label
 
     def pos(self):
-        return self.__pos
+        # NB: try/except is legacy code to support loading grammars trained before POS-field was added 
+        try:
+            return self.__pos
+        except AttributeError:
+            return None
 
     # String representation.
     # return: string
