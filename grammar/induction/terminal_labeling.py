@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from hybridtree.monadic_tokens import MonadicToken
-from discodop.lexicon import getunknownwordmodel, unknownword4, replaceraretestwords, YEARRE, NUMBERRE, UNK
+from discodop.lexicon import getunknownwordmodel, unknownword4, YEARRE, NUMBERRE, UNK, escape
 
 
 class TerminalLabeling:
@@ -365,12 +365,16 @@ class FormPosTerminalsUnkMorph(TerminalLabeling):
 
 
 class StanfordUNKing(TerminalLabeling):
-    def __init__(self, trees=None, unknown_threshold=4, openclass_threshold=150, data=None):
+    """
+    based on discodop/lexicon.py
+    """
+    def __init__(self, trees=None, unknown_threshold=4, openclass_threshold=50, data=None):
         self.unknown_threshold = unknown_threshold
         self.openclass_threshold = openclass_threshold
         self.backoff_mode = False
+        self.test_mode = False
         if data:
-            self.openclasswords, self.sigs, self.words, self.lexicon = data
+            self.sigs, self.words, self.lexicon = data
         else:
             sentences = []
             for tree in trees:
@@ -382,10 +386,11 @@ class StanfordUNKing(TerminalLabeling):
                 openclasswords, tags, wordtags,
                 wordsig, sigtag), msg \
                 = getunknownwordmodel(sentences, unknownword4, self.unknown_threshold, self.openclass_threshold)
-            self.openclasswords = openclasswords
-            self.sigs = sigs
-            self.words = words
-            self.lexicon = lexicon
+            self.sigs = frozenset(sig for sig in sigs)
+            self.words = frozenset(word for word in words)
+            self.lexicon = frozenset(lexicon)
+            self.wordtags = wordtags
+            self.tags = tags
 
     def __str__(self):
         return "stanford-unk-" + str(self.unknown_threshold) \
@@ -399,50 +404,53 @@ class StanfordUNKing(TerminalLabeling):
             return '1970'
         elif NUMBERRE.match(word):
             return '000'
-        if not self.backoff_mode:
-            if word in self.lexicon:
-                return word
-            elif word.lower() in self.lexicon:
-                return word.lower()
-            else:
-                sig = unknownword4(word, _loc, self.lexicon)
-                if sig in self.sigs:
-                    return sig
-                else:
-                    return UNK
+        elif word in self.lexicon:
+            return word
+        elif self.test_mode and word.lower() in self.lexicon:
+            return word.lower()
         else:
-            if word in self.lexicon and word not in self.openclasswords:
-                return word
-            elif word.lower() in self.lexicon and word not in self.openclasswords:
-                return word.lower()
+            sig = unknownword4(word, _loc, self.lexicon)
+            if sig in self.sigs:
+                return sig
             else:
-                sig = unknownword4(word, _loc, self.lexicon)
-                if sig in self.sigs:
-                    return sig
-                else:
-                    return UNK
+                return UNK
 
     def serialize(self):
         return {
             'type': self.__class__.__name__,
             'unknown_threshold': self.unknown_threshold,
             'openclass_threshold': self.openclass_threshold,
-            'openclasswords': self.openclasswords,
-            'sigs': self.sigs,
-            'words': self.words,
-            'lexicon': self.lexicon
+            'sigs': list(self.sigs),
+            'words': list(self.words),
+            'lexicon': list(self.lexicon)
         }
 
     @staticmethod
     def deserialize(json_object):
         assert json_object['type'] == 'StanfordUNKing'
-        openclasswords = json_object['openclasswords']
-        sigs = json_object['sigs']
-        words = json_object['words']
-        lexicon = json_object['lexicon']
+        sigs = frozenset(json_object['sigs'])
+        words = frozenset(json_object['words'])
+        lexicon = frozenset(json_object['lexicon'])
         return StanfordUNKing(unknown_threshold=json_object['unknown_threshold'],
                               openclass_threshold=json_object['openclass_threshold'],
-                              data=(openclasswords, sigs, words, lexicon))
+                              data=(sigs, words, lexicon))
+
+    def create_smoothed_rules(self, epsilon=1. / 100):
+        """Collect new lexical productions.
+        - include productions for rare words with words in addition to signatures.
+        - map unobserved signatures to ``_UNK`` and associate w/all potential tags.
+        - (unobserved combinations of open class (word, tag) handled in parser).
+        :param epsilon: pseudo-frequency of unseen productions ``tag => word``.
+        :returns: a dictionary of lexical rules, with pseudo-frequencies as values.
+        """
+        newrules = {}
+        # rare words as signature AND as word:
+        for word, tag in self.wordtags:
+            if word not in self.lexicon:
+                newrules[(tag, escape(word))] = self.wordtags[word, tag]
+        for tag in self.tags:  # catch-all unknown signature
+            newrules[(tag, UNK)] = epsilon
+        return newrules
 
 
 class TerminalLabelingFactory:

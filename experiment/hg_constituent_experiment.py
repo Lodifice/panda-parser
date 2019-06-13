@@ -21,7 +21,7 @@ from parser.trace_manager.sm_trainer import build_PyLatentAnnotation
 from parser.lcfrs_la import construct_fine_grammar
 import plac
 import json
-from grammar.induction.terminal_labeling import TerminalLabeling, deserialize_labeling
+from grammar.induction.terminal_labeling import TerminalLabeling, deserialize_labeling, StanfordUNKing
 from grammar.induction.recursive_partitioning import the_recursive_partitioning_factory
 from constituent.induction import fringe_extract_lcfrs, token_to_features
 from constituent.construct_morph_annotation import build_nont_splits_dict, pos_cat_and_lex_in_unary, \
@@ -618,6 +618,35 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
             builder.set_count_smoothing(self.rule_smooth_list, 0.5)
         else:
             SplitMergeExperiment.custom_sm_options(self, builder)
+
+    def postprocess_grammar(self, grammar):
+        if isinstance(self.terminal_labeling, StanfordUNKing):
+            self.add_smoothed_lex_rules(grammar)
+            self.terminal_labeling.test_mode = True
+        super(ConstituentExperiment, self).postprocess_grammar(grammar)
+
+    def add_smoothed_lex_rules(self, gr):
+        from grammar.lcfrs import LCFRS_lhs
+        rules = self.terminal_labeling.create_smoothed_rules()
+        new_rules = {}
+
+        for rule in gr.rules():
+            if rule.rhs() == []:
+                assert len(rule.dcp()) == 1
+                dcp = rule.dcp()[0]
+                assert len(dcp.rhs()) == 1
+                term = dcp.rhs()[0]
+                head = term.head()
+                pos = head.pos()
+
+                for tag, form in rules:
+                    if tag == pos:
+                        lhs = LCFRS_lhs(rule.lhs().nont())
+                        lhs.add_arg([form])
+                        new_rules[lhs, dcp] = rules[tag, form]
+
+        for lhs, dcp in new_rules:
+            gr.add_rule(lhs, [], new_rules[(lhs, dcp)], [dcp])
 
     def patch_initial_grammar(self):
         print("Merging feature splits with SCC merger.", file=self.logger)

@@ -1,7 +1,7 @@
 import os
 from grammar.induction.terminal_labeling import  PosTerminals, TerminalLabeling, FeatureTerminals, \
     FrequencyBiasedTerminalLabeling, CompositionalTerminalLabeling, FormTerminals, deserialize_labeling, \
-    FrequentSuffixTerminalLabeling
+    FrequentSuffixTerminalLabeling, StanfordUNKing
 from constituent.construct_morph_annotation import extract_feat
 from experiment.resources import CorpusFile
 
@@ -247,7 +247,7 @@ FINE_TERMINAL_LABELING = CompositionalTerminalLabeling(FormTerminals(), PosTermi
 FALLBACK_TERMINAL_LABELING = PosTerminals()
 
 DEFAULT_RARE_WORD_THRESHOLD = 10
-TERMINAL_LABELINGS = ['form+pos', 'suffixes', 'suffixes+pos']
+TERMINAL_LABELINGS = ['form+pos', 'suffixes', 'suffixes+pos', 'stanford4']
 
 
 def construct_terminal_labeling(labeling, corpus, threshold=DEFAULT_RARE_WORD_THRESHOLD):
@@ -257,6 +257,8 @@ def construct_terminal_labeling(labeling, corpus, threshold=DEFAULT_RARE_WORD_TH
         return FrequentSuffixTerminalLabeling(corpus, threshold)
     elif labeling == 'suffixes+pos':
         return CompositionalTerminalLabeling(FrequentSuffixTerminalLabeling(corpus, threshold), PosTerminals())
+    elif labeling == 'stanford4':
+        return StanfordUNKing(corpus, unknown_threshold=threshold, openclass_threshold=50)
     else:
         raise Exception("Unknown terminal labeling \"%s\"" % labeling)
 

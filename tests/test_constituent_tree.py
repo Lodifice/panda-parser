@@ -10,9 +10,10 @@ from collections import defaultdict
 from constituent.construct_morph_annotation import build_nont_splits_dict, pos_cat_feats
 from util.enumerator import Enumerator
 from parser.naive.parsing import LCFRS_parser
-from grammar.induction.terminal_labeling import FormTerminals
+from grammar.induction.terminal_labeling import FormTerminals, StanfordUNKing
 from parser.sDCPevaluation.evaluator import dcp_to_hybridtree, DCP_evaluator
 from hybridtree.monadic_tokens import construct_constituent_token
+from grammar.lcfrs import LCFRS_lhs
 
 
 class ConstituentTreeTest(unittest.TestCase):
@@ -159,6 +160,73 @@ class ConstituentTreeTest(unittest.TestCase):
         for tok1, tok2 in zip(tree.token_yield(), t.token_yield()):
             self.assertEqual(tok1.form(), tok2.form())
             self.assertEqual(tok1.pos(), tok2.pos())
+
+    def test_stanford_unking_scheme(self):
+        naming = 'child'
+
+        def rec_part(tree):
+            return left_branching_partitioning(len(tree.id_yield()))
+
+        tree = self.tree
+        tree.add_to_root("VP1")
+
+        print(tree)
+
+        terminal_labeling = StanfordUNKing([tree])
+
+        grammar = fringe_extract_lcfrs(tree, rec_part(tree), naming=naming, isolate_pos=True,
+                                       term_labeling=terminal_labeling)
+        print(grammar)
+
+        parser = LCFRS_parser(grammar)
+        parser.set_input([token.form() for token in tree.token_yield()])
+        parser.parse()
+        self.assertTrue(parser.recognized())
+        derivation = parser.best_derivation_tree()
+        e = DCP_evaluator(derivation)
+        dcp_term = e.getEvaluation()
+        print(str(dcp_term[0]))
+        t = ConstituentTree()
+        dcp_to_hybridtree(t,
+                          dcp_term,
+                          [construct_constituent_token(token.form(), '--', True) for token in tree.token_yield()],
+                          ignore_punctuation=False,
+                          construct_token=construct_constituent_token)
+        print(t)
+        self.assertEqual(len(tree.token_yield()), len(t.token_yield()))
+        for tok1, tok2 in zip(tree.token_yield(), t.token_yield()):
+            self.assertEqual(tok1.form(), tok2.form())
+            self.assertEqual(tok1.pos(), tok2.pos())
+
+        rules = terminal_labeling.create_smoothed_rules()
+        print(rules)
+
+        new_rules = {}
+
+        for rule in grammar.rules():
+            if rule.rhs() == []:
+                assert len(rule.dcp()) == 1
+                dcp = rule.dcp()[0]
+                assert len(dcp.rhs()) == 1
+                term = dcp.rhs()[0]
+                head = term.head()
+                pos = head.pos()
+
+                for tag, form in rules:
+                    if tag == pos:
+                        lhs = LCFRS_lhs(rule.lhs().nont())
+                        lhs.add_arg([form])
+                        new_rules[lhs, dcp] = rules[tag, form]
+
+        for lhs, dcp in new_rules:
+            print(str(lhs), str(dcp), new_rules[(lhs, dcp)])
+
+        tokens = [construct_constituent_token('hat', '--', True), construct_constituent_token('HAT', '--', True)]
+        self.assertEqual(terminal_labeling.token_label(tokens[0]), 'hat')
+        self.assertEqual(terminal_labeling.token_label(tokens[1]), '_UNK')
+        terminal_labeling.test_mode = True
+        self.assertEqual(terminal_labeling.token_label(tokens[0]), 'hat')
+        self.assertEqual(terminal_labeling.token_label(tokens[1]), 'hat')
 
     def test_induction_with_spans(self):
         naming = 'child-spans'
