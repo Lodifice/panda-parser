@@ -805,7 +805,7 @@ def span_to_arg(span, children, tree, term_to_pos, term_labeling):
                     k = child_high + 1
                     match = True
         if not match:
-            arg += [term_labeling.token_label(tree.token_yield()[k])]
+            arg += [term_labeling.token_label(tree.token_yield()[k], _loc=k)]
             term_to_pos[k] = len(term_to_pos.keys())
             k += 1
     return arg

@@ -15,13 +15,13 @@ class TerminalLabeling:
         """
         pass
 
-    def token_tree_label(self, token):
+    def token_tree_label(self, token, _loc=None):
         if token.type() == "CONLL-X":
-            return self.token_label(token) + " : " + token.deprel()
+            return self.token_label(token, _loc) + " : " + token.deprel()
         elif token.type() == "CONSTITUENT-CATEGORY":
             return token.category() + " : " + token.edge()
         else:
-            return " : ".join([self.token_label(token), token.pos(), token.edge()])
+            return " : ".join([self.token_label(token, _loc), token.pos(), token.edge()])
 
     def prepare_parser_input(self, tokens):
         return [self.token_label(token, _loc) for _loc, token in enumerate(tokens)]

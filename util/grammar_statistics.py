@@ -82,7 +82,7 @@ def main(directory: str = '.', posinfo: str = '', showpos=False, allposinfo=Fals
                         print(v, end=' ')
                         for rr, pp in zip(r, p):
                             if rr is not None:
-                                print('[', rr.lhs().arg(0)[0], ' # ', pp, ']', end=' ')
+                                print('[', rr.lhs().arg(0)[0], ' – ', rr.dcp()[0].rhs()[0].head().edge_label(), ' # ', pp, ']', end=' ')
                         print()
                     print()
 

@@ -229,7 +229,7 @@ class DCP_position:
         return self.__edge_label
 
     def pos(self):
-        # NB: try/except is legacy code to support loading grammars trained before POS-field was added 
+        # NB: try/except is legacy code to support loading grammars trained before POS-field was added
         try:
             return self.__pos
         except AttributeError:
