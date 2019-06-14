@@ -365,5 +365,10 @@ class ScoringExperiment(Experiment):
     def post_parsing_action(self, gold, system, result_resource, secondaries=None):
         result_resource.score(system, gold, secondaries)
 
+    def activate_train_mode(self):
+        pass
+
+    def activate_test_mode(self):
+        pass
 
 __all__ = ["Experiment", "ScoringExperiment"]

@@ -412,6 +412,7 @@ class SplitMergeExperiment(Experiment):
                 self.write_stage_file()
 
         if self.stage[0] <= 3:
+            self.activate_train_mode()
             if not self.organizer.disable_split_merge:
                 if self.organizer.validator_type == "SCORE" and self.organizer.validator is None:
                     self.initialize_parser()
@@ -436,6 +437,7 @@ class SplitMergeExperiment(Experiment):
             return
 
         if self.stage[0] <= 4:
+            self.activate_test_mode()
             if self.organizer.disable_split_merge and self.organizer.disable_em:
                 self.initialize_parser()
             else:

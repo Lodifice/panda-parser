@@ -622,7 +622,6 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
     def postprocess_grammar(self, grammar):
         if isinstance(self.terminal_labeling, StanfordUNKing):
             self.add_smoothed_lex_rules(grammar)
-            self.terminal_labeling.test_mode = True
         super(ConstituentExperiment, self).postprocess_grammar(grammar)
 
     def add_smoothed_lex_rules(self, gr):
@@ -834,6 +833,14 @@ class ConstituentSMExperiment(ConstituentExperiment, SplitMergeExperiment):
                     return token.pos()
 
         self.terminal_labeling = PatchedTerminalLabeling2(self.induction_settings.terminal_labeling, lookup)
+
+    def activate_test_mode(self):
+        if isinstance(self.terminal_labeling, StanfordUNKing):
+            self.terminal_labeling.test_mode = True
+
+    def activate_train_mode(self):
+        if isinstance(self.terminal_labeling, StanfordUNKing):
+            self.terminal_labeling.test_mode = True
 
 
 LABELING_STRATEGIES_BASE = ['strict', 'child'] \
