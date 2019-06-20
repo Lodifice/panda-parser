@@ -195,7 +195,12 @@ class ConstituentExperiment(ScoringExperiment):
 
     def compute_fallback(self, sentence, label=None):
         full_yield, id_yield, full_token_yield, token_yield = sentence
-        return flat_dummy_constituent_tree(token_yield, full_token_yield, 'NP', 'S', label)
+        return flat_dummy_constituent_tree(token_yield,
+                                           full_token_yield,
+                                           'NP',
+                                           'S',
+                                           label,
+                                           gold_pos=self.terminal_labeling.contains_pos_info())
 
     def read_stage_file(self):
         ScoringExperiment.read_stage_file(self)

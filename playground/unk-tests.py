@@ -261,7 +261,7 @@ def main(limit=3000
     match = re.match(r'^form-unk-(\d+)-morph.*$', terminal_labeling)
     if match:
         unk_threshold = int(match.group(1))
-        term_labelling = grammar.induction.terminal_labeling.FormPosTerminalsUnkMorph(corpus_induce.get_trees(), unk_threshold, filter=["NE", "CARD"],
+        term_labelling = grammar.induction.terminal_labeling.FormPosTerminalsUnkMorph(corpus_induce.get_trees(), unk_threshold, pos_filter=["NE", "CARD"],
                                                                                       add_morph={'NN': ['case', 'number', 'gender']
                         # , 'NE': ['case', 'number', 'gender']
                         # , 'VMFIN': ['number', 'person']
@@ -272,7 +272,7 @@ def main(limit=3000
         match = re.match(r'^form-unk-(\d+).*$', terminal_labeling)
         if match:
             unk_threshold = int(match.group(1))
-            term_labelling = grammar.induction.terminal_labeling.FormPosTerminalsUnk(corpus_induce.get_trees(), unk_threshold, filter=["NE", "CARD"])
+            term_labelling = grammar.induction.terminal_labeling.FormPosTerminalsUnk(corpus_induce.get_trees(), unk_threshold, pos_filter=["NE", "CARD"])
         else:
             term_labelling = grammar.induction.terminal_labeling.the_terminal_labeling_factory().get_strategy(terminal_labeling)
 
