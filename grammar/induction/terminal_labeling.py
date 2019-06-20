@@ -596,7 +596,7 @@ class StanfordUNKing(TerminalLabeling):
         sigs = frozenset(json_object['sigs'])
         words = frozenset(json_object['words'])
         lexicon = frozenset(json_object['lexicon'])
-        unk_model = json_object.get('unk_model', default='unknownword4')
+        unk_model = json_object.get('unk_model', 'unknownword4')
         return StanfordUNKing(unknown_threshold=json_object['unknown_threshold'],
                               openclass_threshold=json_object['openclass_threshold'],
                               unk_model=unk_model,
