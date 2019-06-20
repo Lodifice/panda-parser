@@ -873,6 +873,10 @@ BACKOFF = ['yes', 'auto', 'no']  # auto: use backoff for form+unk terminal
     predicted_pos=('use predicted POS-tags for evaluation', 'flag'),
     parsing_mode=('parsing mode for evaluation', 'option', None, str,
                   [MULTI_OBJECTIVES, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, NO_PARSING]),
+    product_las=('comma separated paths to latent annotations to be used for product-based parsing objective',
+                 'option',
+                 None,
+                 str),
     parsing_limit=('only evaluate on sentences of length up to 40', 'flag'),
     k_best=('k in k-best reranking parsing mode', 'option', None, int),
     directory=('directory in which experiment is run (default: mktemp)', 'option', None, str),
@@ -895,6 +899,7 @@ def main(split,
          merge_percentage=50.0,
          predicted_pos=False,
          parsing_mode=MULTI_OBJECTIVES,
+         product_las="",
          parsing_limit=False,
          k_best=500,
          directory=None,
@@ -925,6 +930,7 @@ def main(split,
     experiment.organizer.merge_percentage = merge_percentage
     experiment.organizer.merge_type = "PERCENT"
     experiment.organizer.threads = threads
+    experiment.organizer.secondary_latent_annotation_paths = product_las.split(",")
 
     train, dev, test, test_input = setup_corpus_resources(split,
                                                           not test_mode,

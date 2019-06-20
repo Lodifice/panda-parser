@@ -55,6 +55,9 @@ class SplitMergeOrganizer:
         self.splitMergeTrainer = None
         self.emTrainer = None
         self.latent_annotations = {}
+        self.secondary_latent_annotations = []  # trained in other experiments; to be used for product decoding
+        self.secondary_latent_annotation_paths = []  # paths of serialized objects
+
         self.merge_sources = {}
         self.last_sm_cycle = None
 
@@ -101,6 +104,19 @@ class SplitMergeExperiment(Experiment):
         if "last_sm_cycle" in self.stage_dict:
             self.organizer.last_sm_cycle = int(self.stage_dict["last_sm_cycle"])
             # TODO: delete unused latent annotations
+
+    def load_secondary_latent_annotations(self, paths):
+        for path in paths:
+            if path == '':
+                continue
+            with open(path, "rb") as f:
+                splits, rootWeights, ruleWeights = pickle.load(f)
+                # very basic tests to avoid incompatible LAs
+                assert len(splits) == len(self.base_grammar.nonts())
+                assert len(ruleWeights) == len(self.base_grammar.rules())
+                la = build_PyLatentAnnotation(splits, rootWeights, ruleWeights, self.organizer.grammarInfo,
+                                              self.organizer.storageManager)
+                self.organizer.secondary_latent_annotations.append(la)
 
     def build_score_validator(self, resource):
         self.organizer.validator = PyCandidateScoreValidator(self.organizer.grammarInfo
@@ -288,7 +304,7 @@ class SplitMergeExperiment(Experiment):
                 self.project_weights()
             self.parser = DiscodopKbestParser(self.base_grammar,
                                               k=self.k_best,
-                                              la=last_la,
+                                              la=[last_la] + self.organizer.secondary_latent_annotations,
                                               nontMap=self.organizer.nonterminal_map,
                                               variational=False,
                                               sum_op=False,
@@ -301,7 +317,8 @@ class SplitMergeExperiment(Experiment):
                                               latent_viterbi_mode=True,
                                               secondaries=["VARIATIONAL", "MAX-RULE-PRODUCT", "LATENT-RERANK"]
             )
-            self.parser.k_best_reranker = Coarse_to_fine_parser(self.base_grammar, last_la,
+            self.parser.k_best_reranker = Coarse_to_fine_parser(self.base_grammar,
+                                                                last_la,
                                                                 self.organizer.grammarInfo,
                                                                 self.organizer.nonterminal_map,
                                                                 base_parser=self.parser)
@@ -336,7 +353,8 @@ class SplitMergeExperiment(Experiment):
             if "latent-viterbi" in self.parsing_mode:
                 self.parser = engine
             else:
-                self.parser = Coarse_to_fine_parser(self.base_grammar,                                  last_la,
+                self.parser = Coarse_to_fine_parser(self.base_grammar,
+                                                    last_la,
                                                     self.organizer.grammarInfo,
                                                     self.organizer.nonterminal_map,
                                                     base_parser=engine)
@@ -360,7 +378,7 @@ class SplitMergeExperiment(Experiment):
             else:
                 self.parser = DiscodopKbestParser(self.base_grammar,
                                                   k=self.k_best,
-                                                  la=last_la,
+                                                  la=[last_la] + self.organizer.secondary_latent_annotations,
                                                   nontMap=self.organizer.nonterminal_map,
                                                   variational="variational" in self.parsing_mode,
                                                   sum_op="sum" in self.parsing_mode,
@@ -438,6 +456,7 @@ class SplitMergeExperiment(Experiment):
 
         if self.stage[0] <= 4:
             self.activate_test_mode()
+            self.load_secondary_latent_annotations(self.organizer.secondary_latent_annotation_paths)
             if self.organizer.disable_split_merge and self.organizer.disable_em:
                 self.initialize_parser()
             else:

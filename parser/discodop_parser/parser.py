@@ -13,6 +13,7 @@ from parser.trace_manager.trace_manager import add, prod
 from parser.supervised_trainer.trainer import PyDerivationManager
 from parser.coarse_to_fine_parser.trace_weight_projection import py_edge_weight_projection
 from parser.discodop_parser.grammar_adapter import rule_idx_from_label, transform_grammar, transform_grammar_cfg_approx
+from parser.trace_manager.sm_trainer import PyLatentAnnotation
 import re
 from sys import stderr
 
@@ -117,7 +118,11 @@ class DiscodopKbestParser(AbstractParser):
         self.secondary_mode = "DEFAULT"
         self.k_best_reranker = None
         if grammarInfo is not None:
-            assert self.la.check_rule_split_alignment()
+            if isinstance(self.la, PyLatentAnnotation):
+                assert self.la.check_rule_split_alignment()
+            else:
+                for l in self.la:
+                    assert l.check_rule_split_alignment()
         if cfg_ctf:
             cfg_rule_list = list(transform_grammar_cfg_approx(grammar))
             self.disco_cfg_grammar = Grammar(cfg_rule_list, start=grammar.start())
@@ -156,8 +161,23 @@ class DiscodopKbestParser(AbstractParser):
             assert manager.is_consistent_with_grammar(self.grammarInfo)
         manager.set_io_cycle_limit(200)
         manager.set_io_precision(0.000001)
-        edge_weights = py_edge_weight_projection(la, manager, variational=variational, debug=self.debug,
+
+        if not isinstance(la, list):
+            la = [la]
+
+        edge_weights = None
+
+        for l in la:
+            edge_weights_l = py_edge_weight_projection(l, manager, variational=variational, debug=self.debug,
                                                  log_mode=self.log_mode)
+            if edge_weights is None:
+                edge_weights = edge_weights_l
+            else:
+                if self.log_mode:
+                    edge_weights = [w1 + w2 for w1, w2 in zip(edge_weights, edge_weights_l)]
+                else:
+                    edge_weights = [op(w1, w2) for w1, w2 in zip(edge_weights, edge_weights_l)]
+
         if self.debug:
             nans = 0
             infs = 0
@@ -172,6 +192,7 @@ class DiscodopKbestParser(AbstractParser):
             print("[", len(edge_weights), nans, infs, zeros, "]")
             if len(edge_weights) < 100:
                 print(edge_weights)
+
         der = manager.viterbi_derivation(0, edge_weights, self.grammar, op=op, log_mode=self.log_mode)
         if der is None:
             print("p", end="")
@@ -190,7 +211,11 @@ class DiscodopKbestParser(AbstractParser):
         manager.convert_chart_to_hypergraph(self.chart, self.disco_grammar, debug=False)
         if debug:
             manager.serialize(b'/tmp/my_debug_hypergraph.hg')
-        vit_der = manager.latent_viterbi_derivation(0, self.la, self.grammar, debug=debug)
+        if isinstance(self.la, list):
+            la = self.la[0]
+        else:
+            la = self.la
+        vit_der = manager.latent_viterbi_derivation(0, la, self.grammar, debug=debug)
         # if len(self.input) < 15 and not debug:
         #     for weight, der in self.k_best_derivation_trees():
         #         if der != vit_der:
