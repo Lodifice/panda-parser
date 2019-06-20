@@ -1,7 +1,10 @@
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from typing import Iterable
+
 from discodop.lexicon import getunknownwordmodel, unknownword4, YEARRE, NUMBERRE, UNK, escape
+from discodop.lexicon import UPPER, HASLOWER, HASLETTER, HASDIGIT, HASNONDIGIT, LOWERUPPER
+
 from hybridtree.general_hybrid_tree import HybridTree
 from hybridtree.monadic_tokens import MonadicToken
 
@@ -405,6 +408,7 @@ class FormPosTerminalsUnk(TerminalLabeling):
             'form_pos_combinations': [fpp for fpp in self.__form_pos_combinations]
         }
 
+
 class FormPosTerminalsUnkMorph(TerminalLabeling):
     def __init__(self,
                  trees,
@@ -470,6 +474,49 @@ class FormPosTerminalsUnkMorph(TerminalLabeling):
         }
 
 
+def unknownword4de(word, loc, _lexicon):
+    """Model 4 of the Stanford parser with modifications for German."""
+    sig = UNK
+
+    # letters
+    if word and word[0] in UPPER:
+        if not HASLOWER.search(word):
+            sig += "-AC"
+        elif loc == 0:
+            sig += "-SC"
+        else:
+            sig += "-C"
+    elif HASLOWER.search(word):
+        sig += "-L"
+    elif HASLETTER.search(word):
+        sig += "-U"
+    else:
+        sig += "-S"  # no letter
+
+    # german specific PP
+    if "ge" in word.lower():
+        sig += "-PP"
+
+    # digits
+    if HASDIGIT.search(word):
+        if HASNONDIGIT.search(word):
+            sig += "-n"
+        else:
+            sig += "-N"
+
+    # punctuation
+    if "-" in word:
+        sig += "-H"
+    if "." in word:
+        sig += "-P"
+    if "," in word:
+        sig += "-C"
+    if len(word) > 3:
+        if word[-1] in LOWERUPPER:
+            sig += "-%s" % word[-2:].lower()
+    return sig
+
+
 class StanfordUNKing(TerminalLabeling):
     """
     based on discodop/lexicon.py
@@ -487,6 +534,8 @@ class StanfordUNKing(TerminalLabeling):
         self.unk_model = unk_model
         if unk_model == 'unknownword4':
             self.unk_function = unknownword4
+        elif unk_model == 'unknownword4de':
+            self.unk_function = unknownword4de
         else:
             assert "Unknown unk_model '%s'." % unk_model
         if data:

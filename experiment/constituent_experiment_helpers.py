@@ -247,7 +247,7 @@ FINE_TERMINAL_LABELING = CompositionalTerminalLabeling(FormTerminals(), PosTermi
 FALLBACK_TERMINAL_LABELING = PosTerminals()
 
 DEFAULT_RARE_WORD_THRESHOLD = 10
-TERMINAL_LABELINGS = ['form+pos', 'suffixes', 'suffixes+pos', 'stanford4']
+TERMINAL_LABELINGS = ['form+pos', 'suffixes', 'suffixes+pos', 'stanford4', 'stanford4de']
 
 
 def construct_terminal_labeling(labeling, corpus, threshold=DEFAULT_RARE_WORD_THRESHOLD):
@@ -257,8 +257,9 @@ def construct_terminal_labeling(labeling, corpus, threshold=DEFAULT_RARE_WORD_TH
         return FrequentSuffixTerminalLabeling(corpus, threshold)
     elif labeling == 'suffixes+pos':
         return CompositionalTerminalLabeling(FrequentSuffixTerminalLabeling(corpus, threshold), PosTerminals())
-    elif labeling == 'stanford4':
-        return StanfordUNKing(corpus, unknown_threshold=threshold, openclass_threshold=50)
+    elif labeling == 'stanford4' or 'stanford4de':
+        unk_model = 'unknownword4%s' % ("de" if labeling == 'stanford4de' else "")
+        return StanfordUNKing(corpus, unknown_threshold=threshold, openclass_threshold=50, unk_model=unk_model)
     else:
         raise Exception("Unknown terminal labeling \"%s\"" % labeling)
 
