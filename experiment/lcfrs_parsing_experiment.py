@@ -10,9 +10,9 @@ import plac
 from constituent.induction import direct_extract_lcfrs, BasicNonterminalLabeling, \
     direct_extract_lcfrs_from_prebinarized_corpus
 from experiment.resources import TRAINING, VALIDATION, TESTING, TESTING_INPUT, RESULT
-from experiment.split_merge_experiment import SplitMergeExperiment
-from experiment.hg_constituent_experiment import ConstituentExperiment, ScorerAndWriter, MULTI_OBJECTIVES, \
-    MULTI_OBJECTIVES_INDEPENDENT, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, NO_PARSING, BACKOFF
+from experiment.split_merge_experiment import SplitMergeExperiment, MULTI_OBJECTIVES, \
+    MULTI_OBJECTIVES_INDEPENDENT, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, NO_PARSING
+from experiment.hg_constituent_experiment import ConstituentExperiment, ScorerAndWriter, BACKOFF
 from experiment.constituent_experiment_helpers import setup_corpus_resources, SPLITS, construct_terminal_labeling, \
     TERMINAL_LABELINGS
 

@@ -18,6 +18,13 @@ from parser.trace_manager.sm_trainer import PySplitMergeTrainerBuilder, build_Py
 from parser.trace_manager.sm_trainer_util import PyGrammarInfo, PyStorageManager
 
 
+MULTI_OBJECTIVES = "multi-objectives"
+MULTI_OBJECTIVES_INDEPENDENT = "multi-objectives-independent"
+NO_PARSING = "no-parsing"
+BASE_GRAMMAR = "base-grammar" # use base grammar for parsing (no annotations LA)
+MAX_RULE_PRODUCT_ONLY = "max-rule-product-only"
+
+
 class SplitMergeOrganizer:
     def __init__(self):
         # basic objects
@@ -484,4 +491,5 @@ class SplitMergeExperiment(Experiment):
         print("counts prior", self.counts_prior, file=file)
 
 
-__all__ = ["SplitMergeExperiment", "SplitMergeOrganizer"]
+__all__ = ["SplitMergeExperiment", "SplitMergeOrganizer", 'MULTI_OBJECTIVES', 'BASE_GRAMMAR',
+           'MAX_RULE_PRODUCT_ONLY', 'MULTI_OBJECTIVES_INDEPENDENT']

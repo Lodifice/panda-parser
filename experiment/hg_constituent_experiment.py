@@ -36,15 +36,10 @@ from hybridtree.constituent_tree import ConstituentTree
 from hybridtree.monadic_tokens import construct_constituent_token
 from experiment.base_experiment import ScoringExperiment
 from experiment.resources import TRAINING, VALIDATION, TESTING, TESTING_INPUT, RESULT, CorpusFile, ScorerResource
-from experiment.split_merge_experiment import SplitMergeExperiment
+from experiment.split_merge_experiment import SplitMergeExperiment, NO_PARSING, TESTING_INPUT, TESTING, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, MULTI_OBJECTIVES, BASE_GRAMMAR
 from experiment.constituent_experiment_helpers import *
 
 
-MULTI_OBJECTIVES = "multi-objectives"
-MULTI_OBJECTIVES_INDEPENDENT = "multi-objectives-independent"
-NO_PARSING = "no-parsing"
-BASE_GRAMMAR = "base-grammar" # use base grammar for parsing (no annotations LA)
-MAX_RULE_PRODUCT_ONLY = "max-rule-product-only"
 TEST_SECOND_HALF = False
 
 MAX_SENTENCE_LENGTH = 5000
@@ -1024,5 +1019,4 @@ if __name__ == '__main__':
     plac.call(main)
 
 
-__all__ = ["ConstituentExperiment", 'MULTI_OBJECTIVES', 'BASE_GRAMMAR',
-           'MAX_RULE_PRODUCT_ONLY', 'MULTI_OBJECTIVES_INDEPENDENT', 'NEGRA']
+__all__ = ["ConstituentExperiment", 'NEGRA']
