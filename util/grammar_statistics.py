@@ -9,9 +9,10 @@ from grammar.induction.terminal_labeling import deserialize_labeling
     posinfo=('comma-separated list of POS to show statistics on (default: "")', 'option', None, str),
     showpos=('show list of POS tags', 'flag'),
     allposinfo=('show statistics for all POS tags', 'flag'),
-    number=('number of lexical entries per POS tag', 'option', 'n', int)
+    number=('number of lexical entries per POS tag', 'option', 'n', int),
+    lagrowth=('print statistics on the growth of the grammars during S/M training', 'flag')
 )
-def main(directory: str = '.', posinfo: str = '', showpos=False, allposinfo=False, number=1):
+def main(directory: str = '.', posinfo: str = '', showpos=False, allposinfo=False, number=1, lagrowth=False):
     rootpath = os.path.abspath(directory)
     def changepath(path):
         return os.path.join(rootpath, os.path.split(path)[1])
@@ -85,6 +86,16 @@ def main(directory: str = '.', posinfo: str = '', showpos=False, allposinfo=Fals
                                 print('[', rr.lhs().arg(0)[0], ' – ', rr.dcp()[0].rhs()[0].head().edge_label(), ' # ', pp, ']', end=' ')
                         print()
                     print()
+
+        if lagrowth:
+            print('Information of growth on the grammar')
+            for i in range(last_sm_cycle + 1):
+                lai_path = changepath(stage_dict['latent_annotations'][str(i)])
+                with open(lai_path, 'rb') as lai_file:
+                    lai = pickle.load(lai_file)
+                nontsi = sum(lai[0])
+                rulesi = sum(len(r) for r in lai[2])
+                print(i, len(lai), len(lai[0]), len(lai[1]), len(lai[2]), nontsi, rulesi)
 
     else:
         print('No stage file found in', rootpath)
