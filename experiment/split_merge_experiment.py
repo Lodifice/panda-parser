@@ -22,6 +22,7 @@ MULTI_OBJECTIVES = "multi-objectives"
 MULTI_OBJECTIVES_INDEPENDENT = "multi-objectives-independent"
 NO_PARSING = "no-parsing"
 BASE_GRAMMAR = "base-grammar" # use base grammar for parsing (no annotations LA)
+ORACLE = "oracle"
 MAX_RULE_PRODUCT_ONLY = "max-rule-product-only"
 
 

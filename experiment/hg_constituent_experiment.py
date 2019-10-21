@@ -36,7 +36,7 @@ from hybridtree.constituent_tree import ConstituentTree
 from hybridtree.monadic_tokens import construct_constituent_token
 from experiment.base_experiment import ScoringExperiment
 from experiment.resources import TRAINING, VALIDATION, TESTING, TESTING_INPUT, RESULT, CorpusFile, ScorerResource
-from experiment.split_merge_experiment import SplitMergeExperiment, NO_PARSING, TESTING_INPUT, TESTING, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, MULTI_OBJECTIVES, BASE_GRAMMAR
+from experiment.split_merge_experiment import SplitMergeExperiment, NO_PARSING, TESTING_INPUT, TESTING, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, MULTI_OBJECTIVES, BASE_GRAMMAR, ORACLE
 from experiment.constituent_experiment_helpers import *
 
 
@@ -867,7 +867,7 @@ BACKOFF = ['yes', 'auto', 'no']  # auto: use backoff for form+unk terminal
     merge_percentage=('percentage of splits that is merged', 'option', None, float),
     predicted_pos=('use predicted POS-tags for evaluation', 'flag'),
     parsing_mode=('parsing mode for evaluation', 'option', None, str,
-                  [MULTI_OBJECTIVES, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, NO_PARSING]),
+                  [MULTI_OBJECTIVES, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, NO_PARSING, ORACLE]),
     product_las=('comma separated paths to latent annotations to be used for product-based parsing objective',
                  'option',
                  None,
@@ -926,6 +926,7 @@ def main(split,
     experiment.organizer.merge_type = "PERCENT"
     experiment.organizer.threads = threads
     experiment.organizer.secondary_latent_annotation_paths = product_las.split(",")
+    experiment.oracle_parsing = parsing_mode == ORACLE
 
     train, dev, test, test_input = setup_corpus_resources(split,
                                                           not test_mode,
@@ -975,6 +976,14 @@ def main(split,
                                                        directory=experiment.directory,
                                                        logger=experiment.logger,
                                                        secondary_scores=3)
+        experiment.run_experiment()
+    elif parsing_mode == ORACLE:
+        experiment.k_best = 500
+        experiment.organizer.project_weights_before_parsing = True
+        experiment.parsing_mode = "k-best-rerank-disco-dop"
+        experiment.resources[RESULT] = ScorerAndWriter(experiment,
+                                                       directory=experiment.directory,
+                                                       logger=experiment.logger)
         experiment.run_experiment()
     elif parsing_mode == BASE_GRAMMAR:
         experiment.k_best = 1
