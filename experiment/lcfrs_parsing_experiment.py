@@ -11,7 +11,7 @@ from constituent.induction import direct_extract_lcfrs, BasicNonterminalLabeling
     direct_extract_lcfrs_from_prebinarized_corpus
 from experiment.resources import TRAINING, VALIDATION, TESTING, TESTING_INPUT, RESULT
 from experiment.split_merge_experiment import SplitMergeExperiment, MULTI_OBJECTIVES, \
-    MULTI_OBJECTIVES_INDEPENDENT, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, NO_PARSING
+    MULTI_OBJECTIVES_INDEPENDENT, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, NO_PARSING, ORACLE
 from experiment.hg_constituent_experiment import ConstituentExperiment, ScorerAndWriter, BACKOFF
 from experiment.constituent_experiment_helpers import setup_corpus_resources, SPLITS, construct_terminal_labeling, \
     TERMINAL_LABELINGS
@@ -224,7 +224,7 @@ class Positional(object):
     merge_percentage=('percentage of splits that is merged', 'option', None, float),
     predicted_pos=('use predicted POS-tags for evaluation', 'flag'),
     parsing_mode=('parsing mode for evaluation', 'option', None, str,
-                  [MULTI_OBJECTIVES, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, NO_PARSING]),
+                  [MULTI_OBJECTIVES, BASE_GRAMMAR, MAX_RULE_PRODUCT_ONLY, MULTI_OBJECTIVES_INDEPENDENT, NO_PARSING, ORACLE]),
     parsing_limit=('only evaluate on sentences of length up to 40', 'flag'),
     k_best=('k in k-best reranking parsing mode', 'option', None, int),
     directory=('directory in which experiment is run (default: mktemp)', 'option', None, str),
@@ -309,7 +309,7 @@ def main(split,
     experiment.organizer.max_sm_cycles = sm_cycles
     experiment.organizer.threads = threads
     experiment.counts_prior = counts_prior
-    experiment.oracle_parsing = False
+    experiment.oracle_parsing = parsing_mode == ORACLE
     experiment.k_best = k_best
     experiment.disco_dop_params["pruning_k"] = 50000
     experiment.read_stage_file()
@@ -331,6 +331,14 @@ def main(split,
                                                        directory=experiment.directory,
                                                        logger=experiment.logger,
                                                        secondary_scores=3)
+        experiment.run_experiment()
+    elif parsing_mode == ORACLE:
+        experiment.k_best = 500
+        experiment.organizer.project_weights_before_parsing = True
+        experiment.parsing_mode = "k-best-rerank-disco-dop"
+        experiment.resources[RESULT] = ScorerAndWriter(experiment,
+                                                       directory=experiment.directory,
+                                                       logger=experiment.logger)
         experiment.run_experiment()
     elif parsing_mode == BASE_GRAMMAR:
         experiment.k_best = 1
