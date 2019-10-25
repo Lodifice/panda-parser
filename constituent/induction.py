@@ -83,7 +83,7 @@ def direct_extract_lcfrs(tree,
         lhs = LCFRS_lhs(START)
         label = term_labeling.token_label(tree.node_token(root))
         lhs.add_arg([label])
-        dcp_rule = DCP_rule(DCP_var(-1, 0), [DCP_term(DCP_index(0, edge_label=tree.node_token(root).edge()), [])])
+        dcp_rule = DCP_rule(DCP_var(-1, 0), [DCP_term(DCP_index(0, edge_label=tree.node_token(root).edge(), pos=tree.node_token(root).pos()), [])])
         gram.add_rule(lhs, [], dcp=[dcp_rule])
     else:
         first = direct_extract_lcfrs_from(tree, root, gram, term_labeling, nont_labeling, binarize, isolate_pos,
@@ -124,7 +124,7 @@ def direct_extract_lcfrs_from(tree,
     if tree.is_leaf(id):
         label = term_labeling.token_label(tree.node_token(id))
         lhs.add_arg([label])
-        dcp_rule = DCP_rule(DCP_var(-1, 0), [DCP_term(DCP_index(0, edge_label=tree.node_token(id).edge()), [])])
+        dcp_rule = DCP_rule(DCP_var(-1, 0), [DCP_term(DCP_index(0, tree.node_token(id).edge(), tree.node_token(id).pos()), [])])
         gram.add_rule(lhs, [], dcp=[dcp_rule])
         return lhs.nont()
 
@@ -192,7 +192,7 @@ def direct_extract_lcfrs_from_prebinarized_corpus(tree,
         lhs = LCFRS_lhs(START)
         label = term_labeling.token_label(tree.node_token(root))
         lhs.add_arg([label])
-        dcp_rule = DCP_rule(DCP_var(-1, 0), [DCP_term(DCP_index(0, edge_label=tree.node_token(root).edge()), [])])
+        dcp_rule = DCP_rule(DCP_var(-1, 0), [DCP_term(DCP_index(0, edge_label=tree.node_token(root).edge(), pos=tree.node_token(root).pos()), [])])
         gram.add_rule(lhs, [], dcp=[dcp_rule])
     else:
         first = direct_extract_lcfrs_prebinarized_recur(tree, root, gram, term_labeling, nont_labeling, isolate_pos)
@@ -219,7 +219,7 @@ def direct_extract_lcfrs_prebinarized_recur(tree,
     if tree.is_leaf(idx):
         label = term_labeling.token_label(tree.node_token(idx))
         lhs.add_arg([label])
-        dcp_rule = DCP_rule(DCP_var(-1, 0), [DCP_term(DCP_index(0, edge_label=tree.node_token(idx).edge()), [])])
+        dcp_rule = DCP_rule(DCP_var(-1, 0), [DCP_term(DCP_index(0, edge_label=tree.node_token(idx).edge(), pos=tree.node_token(idx).pos()), [])])
         gram.add_rule(lhs, [], dcp=[dcp_rule])
         return lhs.nont()
 
