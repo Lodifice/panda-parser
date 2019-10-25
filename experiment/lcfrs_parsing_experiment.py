@@ -100,7 +100,7 @@ class LCFRSExperiment(ConstituentExperiment, SplitMergeExperiment):
 
         return grammar, None
 
-    def induce_from(self, obj):
+    def induce_from(self, obj, **kwargs):
         if self.induction_settings.use_discodop_binarization:
             return self.induce_from_disco_binarized(obj)
 
@@ -209,6 +209,7 @@ class Positional(object):
 @plac.annotations(
     split=Positional('the corpus/split to run the experiment on', str, SPLITS),
     test_mode=('evaluate on test set instead of dev. set', 'flag'),
+    left_to_right=('binarization (default head-outward)', 'flag'),
     terminal_labeling=('style of terminals in grammar', 'option', None, str, TERMINAL_LABELINGS),
     unk_threshold=('threshold for unking rare words', 'option', None, int),
     terminal_backoff=('add "all backoff" version of sentences to training/validation corpus', 'option', None, str, BACKOFF),
@@ -233,6 +234,7 @@ class Positional(object):
 def main(split,
          test_mode=False,
          quick=False,
+         left_to_right=False,
          terminal_labeling='form+pos',
          unk_threshold=4,
          terminal_backoff='auto',
@@ -258,18 +260,22 @@ def main(split,
     induction_settings = InductionSettings()
     induction_settings.disconnect_punctuation = False
     induction_settings.normalize = True
-    induction_settings.use_discodop_binarization = True
-    if split in ['SPMRL', 'HN08', 'negraall']:
-        headrules = "util/negra.headrules"
-    elif split in ['lassy-small']:
-        headrules = 'util/alpino.headrules'
+    if left_to_right:
+        induction_settings.binarize = True
+        induction_settings.hmarkov = h_markov
     else:
-        headrules = 'util/ptb.headrules'
-    binarization_settings = ["--headrules=" + headrules,
-                             "--binarize",
-                             "-h " + str(h_markov),
-                             "-v " + str(v_markov)]
-    induction_settings.discodop_binarization_params = binarization_settings
+        induction_settings.use_discodop_binarization = True
+        if split in ['SPMRL', 'HN08', 'negraall']:
+            headrules = "util/negra.headrules"
+        elif split in ['lassy-small']:
+            headrules = 'util/alpino.headrules'
+        else:
+            headrules = 'util/ptb.headrules'
+        binarization_settings = ["--headrules=" + headrules,
+                                 "--binarize",
+                                 "-h " + str(h_markov),
+                                 "-v " + str(v_markov)]
+        induction_settings.discodop_binarization_params = binarization_settings
     induction_settings.edge_labels = not no_edge_labels
 
     filters = []
