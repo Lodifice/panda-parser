@@ -36,23 +36,36 @@ def setup_corpus_resources(split, dev_mode=True, quick=False, test_pred=False, t
         validation_size = validation_start + 4999
         validation_filter = None
 
+        if test_pred:
+            corpus_type_test = "WORD/POS"
+
         if dev_mode:
             test_start = test_input_start = validation_start
             test_limit = test_input_limit = validation_size
             test_path = test_input_path \
                 = 'res/SPMRL_SHARED_2014_NO_ARABIC/GERMAN_SPMRL/gold/xml/dev/dev.German.gold.xml'
+            if test_pred:
+                test_input_path = 'res/TIGER/tigerSPMRL-dev.pred_tags.raw'
+                test_input_start = 0
         else:
             test_start = test_input_start = 45475
             test_limit = test_input_limit = test_start + 4999
             test_path = test_input_path \
                 = 'res/SPMRL_SHARED_2014_NO_ARABIC/GERMAN_SPMRL/gold/xml/test/test.German.gold.xml'
+            if test_pred:
+                test_input_path = 'res/TIGER/tigerSPMRL-test.pred_tags.raw'
+                test_input_start = 0
+                test_input_exclude = [46234 - test_start, 50224 - test_start]
+
         test_filter = test_input_filter = None
 
         if quick:
             train_path = 'res/SPMRL_SHARED_2014_NO_ARABIC/GERMAN_SPMRL/gold/xml/train5k/train5k.German.gold.xml'
             train_limit = train_start + 2000
             validation_size = validation_start + 200
-            test_limit = test_input_limit = test_start + 200
+            test_limit = test_start + 200
+            test_input_limit = test_input_start + 200
+
     #
     elif split == "HN08":
         # files are based on the scripts in Coavoux's mind the gap 1.0

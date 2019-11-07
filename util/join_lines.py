@@ -13,7 +13,7 @@ for line in fd:
         elif s[1] == '-RRB-':
             s[1] = ')'
             s[5] = '$('
-        print(s[1] + "/" +  s[5], end=' ')
+        print(s[1] + "/" + s[5], end=' ')
     else:
         print()
 
