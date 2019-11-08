@@ -268,13 +268,17 @@ class DiscodopKbestParser(AbstractParser):
                                             splitprune=True,
                                             markorigin=True,
                                             finecfg=False)
-                self.chart, msg = parse(self.input,
-                                        self.disco_grammar,
-                                        estimates=self.estimates,
-                                        whitelist=whitelist,
-                                        splitprune=True,
-                                        markorigin=True,
-                                        exhaustive=True)
+                try:
+                    self.chart, msg = parse(self.input,
+                                            self.disco_grammar,
+                                            estimates=self.estimates,
+                                            whitelist=whitelist,
+                                            splitprune=True,
+                                            markorigin=True,
+                                            exhaustive=True)
+                except ValueError as e:
+                    self.chart = None
+                    print("discodop error", e, e.with_traceback(), file=stderr)
         else:
             self.chart, msg = parse(self.input,
                                     self.disco_grammar,
