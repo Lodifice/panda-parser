@@ -278,7 +278,7 @@ class DiscodopKbestParser(AbstractParser):
                                             exhaustive=True)
                 except ValueError as e:
                     self.chart = None
-                    print("discodop error", e, e.with_traceback(), file=stderr)
+                    print("discodop error", e, file=stderr)
         else:
             self.chart, msg = parse(self.input,
                                     self.disco_grammar,
