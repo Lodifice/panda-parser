@@ -301,8 +301,16 @@ class ConstituentExperiment(ScoringExperiment):
         self.resources_data['disco_binarized_corpus'] \
             = self.read_corpus_export(disco_resource, mode="DISCO-DOP", skip_normalization=True)
 
-    def read_corpus_tagged(self, resource):
-        return itertools.islice(tagged_parse.parse_tagged_sentences(resource.path), resource.start, resource.limit)
+    @staticmethod
+    def read_corpus_tagged(resource):
+        for i, s in enumerate(tagged_parse.parse_tagged_sentences(resource.path)):
+            if i < resource.start:
+                continue
+            if resource.exclude and i in resource.exclude:
+                continue
+            if i >= resource.end:
+                return
+            yield s
 
     def parsing_preprocess(self, obj):
         if isinstance(obj, HybridTree):
