@@ -20,7 +20,7 @@ sterm_include = [cython_dependency_src_path]
 # change if eigen is installed in the user-local directory
 # $COMPUTE_ROOT/usr/include/eigen3,
 compute_root = ""
-eigen_include = [compute_root + "/usr/include/eigen3", compute_root + "/usr/include"]
+eigen_include = [compute_root + "/usr/include/eigen3", compute_root + "/usr/local/include/eigen3", compute_root + "/usr/include"]
 add_include = [compute_root + "/usr/local/include"]
 
 # Schick Parser (mainly implemented by Timo Schick according to construction
