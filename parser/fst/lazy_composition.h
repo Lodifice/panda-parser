@@ -3,7 +3,7 @@
 
 using namespace fst;
 
-StdVectorFst construct_fa(std::vector<string> sequence, const StdFst & fst) {
+StdVectorFst construct_fa(std::vector<std::string> sequence, const StdFst & fst) {
     StdVectorFst fsa;
     fsa.SetInputSymbols(fst.InputSymbols());
     fsa.SetOutputSymbols(fst.InputSymbols());
