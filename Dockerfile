@@ -4,7 +4,7 @@ FROM ubuntu:bionic
 ARG EIGEN_REVISION=9e6bc1d
 ARG OPENFST_VERSION=1.7.5
 ARG PYNINI_VERSION=2.0.9
-ARG GF_VERSION=3.10-2
+ARG GF_VERSION=3.10
 
 # @Python: read files in UTF-8 encoding!
 ENV LANG=C.UTF-8
@@ -12,7 +12,7 @@ ENV LANG=C.UTF-8
 # Install build environment and most dependencies via apt
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt update \
-    && apt -y install build-essential cmake git graphviz libncurses5-dev libre2-dev mercurial python-dev python3-dev python3-numpy python3-pip wget zlib1g-dev \
+    && apt -y install autoconf build-essential cmake git graphviz libncurses5-dev libre2-dev libtool mercurial python-dev python3-dev python3-numpy python3-pip wget zlib1g-dev \
     && apt -y autoremove \
     && apt -y clean \
     && rm -rf /var/lib/apt/lists/*
@@ -29,6 +29,7 @@ WORKDIR /
 RUN git clone --recursive --branch=chart-exposure https://github.com/kilian-gebhardt/disco-dop
 WORKDIR disco-dop
 RUN pip3 install -r requirements.txt
+RUN sed -i 's/install --user/install/' Makefile
 RUN make install
 WORKDIR /
 
@@ -49,8 +50,16 @@ RUN python3 setup.py install
 WORKDIR /
 
 # Install Grammatical Framework custom package
-RUN wget "http://www.grammaticalframework.org/download/gf_${GF_VERSION}_amd64.deb"
-RUN dpkg -i "gf_${GF_VERSION}_amd64.deb"
+RUN wget "https://github.com/GrammaticalFramework/gf-core/archive/GF-$GF_VERSION.tar.gz"
+RUN tar -xf "GF-$GF_VERSION.tar.gz"
+WORKDIR "gf-core-GF-$GF_VERSION/src/runtime/c"
+RUN bash setup.sh configure
+RUN bash setup.sh build
+RUN bash setup.sh install
+WORKDIR "/gf-core-GF-$GF_VERSION/src/runtime/python"
+RUN python3 setup.py build
+RUN python3 setup.py install
+WORKDIR /
 
 # Install Boost from source
 ARG BOOST_VERSION=1.69.0
