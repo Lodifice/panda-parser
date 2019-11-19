@@ -1,6 +1,7 @@
 backports-abc>=0.4
 Cython>=0.25.2
 graphviz>=0.5.1
+nltk>=3.4.5
 # openfst>=1.5.1.post6
 # pgf>=1.0
 pickleshare>=0.7.4
