@@ -217,7 +217,7 @@ class DiscodopAdapterTest(unittest.TestCase):
         print(chart.stats())
         print("root label", chart.label(root))
         print(root, chart.itemid1(chart.label(root), chart.indices(root)))
-        for i in range(1, chart.numitems() + 1):
+        for i in range(1, chart.numitems()):
             print(i, chart.label(i), chart.indices(i), chart.numedges(i))
             if True or len(chart.indices(i)) > 1:
                 for edge_num in range(chart.numedges(i)):
