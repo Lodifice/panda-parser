@@ -1,5 +1,15 @@
 # INSTALL GUIDE
 
+## Via Docker
+
+Build an image, the current directory is added as the top layer.
+
+`docker build --tag=panda-parser .`
+
+Obtain a shell in the container.
+
+`docker run --rm -it panda-parser bash`
+
 ## General prerequisites
 
 `python3.5` or newer, `sqlite3`, `pip3`, `re2` (`libre2-dev` on ubuntu)
